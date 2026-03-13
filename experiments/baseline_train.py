@@ -35,12 +35,15 @@ def smiles_to_fingerprint(
 
 def load_data() -> tuple[np.ndarray, np.ndarray]:
     """Load ESOL dataset and convert to features/targets."""
-    data_path = Path(__file__).parent.parent / "data" / "esol.csv"
+    # Data is in src/pharma_agents/data/ (shared across experiments)
+    data_path = (
+        Path(__file__).parent.parent / "src" / "pharma_agents" / "data" / "esol.csv"
+    )
     df = pd.read_csv(data_path)
 
     # Convert SMILES to fingerprints
     X = np.array([smiles_to_fingerprint(smi) for smi in df["smiles"]])
-    y = df["measured log solubility in mols per litre"].values
+    y: np.ndarray = df["measured log solubility in mols per litre"].values  # type: ignore[assignment]
 
     return X, y
 

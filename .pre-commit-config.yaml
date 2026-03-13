@@ -13,3 +13,14 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+
+  # Pyright only on push (not commit) - allows experimentation, catches errors before sharing
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: pyright
+        language: system
+        types: [python]
+        stages: [pre-push]
+        exclude: ^src/pharma_agents/tools/train\.py$  # Agents modify this, skip it

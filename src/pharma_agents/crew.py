@@ -71,16 +71,16 @@ class PharmaAgentsCrew:
     tasks_config = "tasks.yaml"
 
     def __init__(self):
-        self.tools_dir = Path(__file__).parent / "tools"
+        self.experiments_dir = Path(__file__).parent.parent.parent / "experiments"
 
     @agent
     def hypothesis_agent(self) -> Agent:
         """Research Scientist who proposes improvements."""
         return Agent(
-            config=self.agents_config["hypothesis_agent"],
+            config=self.agents_config["hypothesis_agent"],  # type: ignore[index]
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.tools_dir / "train.py")),
+                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
             ],
             verbose=True,
         )
@@ -89,10 +89,10 @@ class PharmaAgentsCrew:
     def model_agent(self) -> Agent:
         """ML Engineer who implements changes."""
         return Agent(
-            config=self.agents_config["model_agent"],
+            config=self.agents_config["model_agent"],  # type: ignore[index]
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.tools_dir / "train.py")),
+                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
                 WriteTrainPyTool(),
             ],
             verbose=True,
@@ -115,15 +115,15 @@ class PharmaAgentsCrew:
     def hypothesis_task(self) -> Task:
         """Task: Propose an improvement."""
         return Task(
-            config=self.tasks_config["hypothesis_task"],
+            config=self.tasks_config["hypothesis_task"],  # type: ignore[index,call-arg]
         )
 
     @task
     def implement_task(self) -> Task:
         """Task: Implement the proposed change."""
         return Task(
-            config=self.tasks_config["implement_task"],
-            context=[self.hypothesis_task()],
+            config=self.tasks_config["implement_task"],  # type: ignore[index,call-arg]
+            context=[self.hypothesis_task()],  # type: ignore[list-item]
         )
 
     @task
@@ -137,8 +137,8 @@ class PharmaAgentsCrew:
     def crew(self) -> Crew:
         """Create the pharma-agents crew."""
         return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
+            agents=self.agents,  # type: ignore[attr-defined]
+            tasks=self.tasks,  # type: ignore[attr-defined]
             process=Process.sequential,
             verbose=True,
         )

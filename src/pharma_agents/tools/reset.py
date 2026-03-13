@@ -1,18 +1,20 @@
 """Reset train.py to baseline state."""
 
 import shutil
-from pathlib import Path
+
+from pharma_agents.memory import get_baseline_config, get_experiments_dir
 
 
 def reset_to_baseline() -> None:
     """Copy baseline_train.py to train.py, resetting all agent modifications."""
-    tools_dir = Path(__file__).parent
-    baseline = tools_dir / "baseline_train.py"
-    train = tools_dir / "train.py"
+    experiments_dir = get_experiments_dir()
+    baseline = experiments_dir / "baseline_train.py"
+    train = experiments_dir / "train.py"
 
+    config = get_baseline_config()
     shutil.copy(baseline, train)
     print("Reset train.py to baseline state")
-    print("Baseline RMSE: 1.3175")
+    print(f"Baseline {config['metric']}: {config['score']:.4f}")
 
 
 if __name__ == "__main__":

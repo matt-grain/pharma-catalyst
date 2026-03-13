@@ -129,9 +129,9 @@ def git_reset_train_to_baseline(repo_path: Path) -> None:
     """Reset train.py to baseline state."""
     import shutil
 
-    tools_dir = repo_path / "src" / "pharma_agents" / "tools"
-    baseline = tools_dir / "baseline_train.py"
-    train = tools_dir / "train.py"
+    experiments_dir = repo_path / "experiments"
+    baseline = experiments_dir / "baseline_train.py"
+    train = experiments_dir / "train.py"
     shutil.copy(baseline, train)
     logger.info("Reset train.py to baseline")
 
@@ -139,7 +139,7 @@ def git_reset_train_to_baseline(repo_path: Path) -> None:
 def git_commit_change(repo_path: Path, message: str) -> bool:
     """Commit current changes to train.py."""
     try:
-        train_py = repo_path / "src" / "pharma_agents" / "tools" / "train.py"
+        train_py = repo_path / "experiments" / "train.py"
         subprocess.run(
             ["git", "add", str(train_py)],
             cwd=repo_path,
@@ -171,7 +171,7 @@ def git_commit_change(repo_path: Path, message: str) -> bool:
 def git_revert_changes(repo_path: Path) -> bool:
     """Revert uncommitted changes to train.py."""
     try:
-        train_py = repo_path / "src" / "pharma_agents" / "tools" / "train.py"
+        train_py = repo_path / "experiments" / "train.py"
         subprocess.run(
             ["git", "checkout", str(train_py)],
             cwd=repo_path,
@@ -237,8 +237,10 @@ def run(iterations: int = 10) -> None:
         logger.error(f"Baseline training failed: {baseline_result.error}")
         return
 
-    baseline_rmse = baseline_result.rmse
-    best_rmse = baseline_rmse
+    # After success check, rmse is guaranteed to be set
+    assert baseline_result.rmse is not None
+    baseline_rmse: float = baseline_result.rmse
+    best_rmse: float = baseline_rmse
     logger.info(f"Baseline RMSE: {baseline_rmse:.4f}")
 
     # Commit baseline state on this branch
@@ -359,6 +361,10 @@ def run(iterations: int = 10) -> None:
 
             git_revert_changes(project_root)
 
+    # Finalize run with conclusion for future researchers
+    conclusion = memory.finalize_run(run_number)
+    logger.info(f"Run conclusion: {conclusion}")
+
     # Summary
     logger.info("")
     logger.info("=" * 60)
@@ -402,7 +408,7 @@ def promote(run_number: int) -> None:
     """
     Promote a run branch to main, making it the new baseline.
 
-    This merges run/XXX into main and updates baseline_train.py.
+    This merges run/XXX into main and updates baseline_train.py + baseline.json.
     """
     project_root = Path(__file__).parent.parent.parent
     branch_name = f"run/{run_number:03d}"
@@ -434,25 +440,43 @@ def promote(run_number: int) -> None:
     # Update baseline_train.py with current train.py
     import shutil
 
-    tools_dir = project_root / "src" / "pharma_agents" / "tools"
-    train = tools_dir / "train.py"
-    baseline = tools_dir / "baseline_train.py"
+    experiments_dir = project_root / "experiments"
+    train = experiments_dir / "train.py"
+    baseline = experiments_dir / "baseline_train.py"
     shutil.copy(train, baseline)
 
+    # Get new baseline score
+    from .tools.evaluate import run_training
+
+    eval_result = run_training()
+
+    # Update baseline.json - preserve metric config, update score
+    baseline_json = experiments_dir / "baseline.json"
+    existing_config = json.loads(baseline_json.read_text())
+
+    baseline_data = {
+        "score": eval_result.score,
+        "metric": existing_config.get("metric", "RMSE"),
+        "direction": existing_config.get("direction", "lower_is_better"),
+        "description": f"Promoted from {branch_name}",
+        "updated": datetime.now().strftime("%Y-%m-%d"),
+    }
+    baseline_json.write_text(json.dumps(baseline_data, indent=2))
+
     # Commit the new baseline
-    subprocess.run(["git", "add", str(baseline)], cwd=project_root, capture_output=True)
+    subprocess.run(
+        ["git", "add", str(baseline), str(baseline_json)],
+        cwd=project_root,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "commit", "-m", f"Update baseline from {branch_name}"],
         cwd=project_root,
         capture_output=True,
     )
 
-    # Get new baseline RMSE
-    from .tools.evaluate import run_training
-
-    result = run_training()
     logger.success(f"Promoted {branch_name} to main!")
-    logger.info(f"New baseline RMSE: {result.rmse:.4f}")
+    logger.info(f"New baseline RMSE: {eval_result.rmse:.4f}")
 
 
 if __name__ == "__main__":

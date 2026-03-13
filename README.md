@@ -22,21 +22,41 @@ Give an AI agent crew a molecular ML task. Let them iterate autonomously. They p
                     |    (CrewAI)      |
                     +--------+---------+
                              |
-          +------------------+------------------+
-          |                  |                  |
-          v                  v                  v
-   +-------------+    +-------------+    +-------------+
-   | Hypothesis  |    |   Model     |    |  Evaluator  |
-   |   Agent     |    |   Agent     |    |   Agent     |
-   +-------------+    +-------------+    +-------------+
-   Research Scientist   ML Engineer      QA Scientist
+               +-------------+-------------+
+               |                           |
+               v                           v
+        +-------------+             +-------------+
+        | Hypothesis  |             |   Model     |
+        |   Agent     | ─────────►  |   Agent     |
+        +-------------+             +-------------+
+        Research Scientist           ML Engineer
+               │                           │
+               │                           v
+               │                    +-------------+
+               │                    | code_check  |
+               │                    | (ruff+pyright)
+               │                    +-------------+
+               │                           │
+               v                           v
+        +------------------------------------------+
+        |           Python Evaluation              |
+        |  (run_training → compare → commit/revert)|
+        +------------------------------------------+
+                             │
+                             v
+                    +------------------+
+                    |  Agent Memory    |
+                    | (experiments/    |
+                    |  memory.json)    |
+                    +------------------+
 ```
 
 **Sequential process:**
-1. Hypothesis Agent proposes an improvement
-2. Model Agent implements it in `train.py`
-3. Evaluator Agent runs training, reports RMSE
-4. If improved → commit. If worse → revert. Repeat.
+1. Hypothesis Agent proposes an improvement (informed by memory)
+2. Model Agent implements it in `train.py` (validates with ruff+pyright)
+3. Python runs training, compares RMSE (no LLM hallucination possible)
+4. If improved → commit + save to memory. If worse → revert + save failure to memory.
+5. Next iteration sees what worked and what failed.
 
 ## Target Task
 
@@ -93,6 +113,10 @@ uv run python -m pharma_agents.main
 # Promote a successful run to main (makes it the new baseline)
 uv run python -m pharma_agents.promote 1
 
+# Discard a cancelled/stuck run (cleans memory, deletes branch)
+uv run python -m pharma_agents.discard 2
+uv run python -m pharma_agents.discard 2 --keep-logs  # keep log files
+
 # Reset train.py to baseline manually
 uv run python -m pharma_agents.tools.reset
 
@@ -131,50 +155,147 @@ Future runs will start from this new baseline.
 
 ```
 pharma-agents/
-├── src/pharma_agents/
-│   ├── crew.py              # CrewAI crew definition
-│   ├── agents.yaml          # Agent configs (roles, goals, backstories)
-│   ├── tasks.yaml           # Task definitions
-│   ├── main.py              # Entry point - runs iterations
-│   ├── promote.py           # Promote run branch to main
+├── src/pharma_agents/           # Library code (generic, reusable)
+│   ├── crew.py                  # CrewAI crew definition
+│   ├── memory.py                # Persistent agent memory
+│   ├── agents.yaml              # Agent configs (roles, goals, backstories)
+│   ├── tasks.yaml               # Task definitions
+│   ├── main.py                  # Entry point - runs iterations
+│   ├── promote.py               # Promote run branch to main
+│   ├── discard.py               # Discard cancelled/stuck runs
 │   ├── tools/
-│   │   ├── baseline_train.py  # BASELINE (never modified by agents)
-│   │   ├── train.py           # Working copy (agents modify this)
-│   │   ├── evaluate.py        # Fixed evaluation harness
-│   │   └── reset.py           # Reset train.py to baseline
+│   │   ├── custom_tools.py      # WriteTrainPyTool, CodeCheckTool
+│   │   ├── evaluate.py          # Fixed evaluation harness
+│   │   └── reset.py             # Reset train.py to baseline
 │   └── data/
-│       ├── fetch.py         # Download ESOL dataset
-│       └── esol.csv         # Dataset (1,128 molecules)
-├── experiments/
-│   ├── run_001/             # Logs for run 1
-│   │   └── *.log
-│   ├── run_002/             # Logs for run 2
-│   └── ...
-├── .env                     # API keys (GOOGLE_API_KEY)
+│       ├── fetch.py             # Download dataset
+│       └── esol.csv             # ESOL dataset (1,128 molecules)
+├── experiments/                 # Experiment-specific (mutable)
+│   ├── baseline.json            # Baseline config (metric, score, direction)
+│   ├── baseline_train.py        # BASELINE code (never modified by agents)
+│   ├── train.py                 # Working copy (agents modify this)
+│   ├── memory.json              # Persistent agent memory
+│   ├── run_001/                 # Logs for run 1
+│   └── run_002/                 # Logs for run 2
+├── .env                         # API keys (GOOGLE_API_KEY, LLM_MODEL)
 ├── pyproject.toml
 └── README.md
 ```
+
+This separation allows swapping experiments (different models, metrics, datasets) by replacing the `experiments/` folder contents.
+
+## Agent Memory
+
+Agents learn across runs via persistent memory (`experiments/memory.json`).
+
+```json
+{
+  "runs": {
+    "1": {
+      "run_id": 1,
+      "start_time": "2026-03-13T11:52:00",
+      "experiments": [
+        {
+          "iteration": 1,
+          "hypothesis": "Combine HistGradientBoosting with physicochemical descriptors",
+          "reasoning": "Building on successful approaches from memory",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.7061,
+          "improvement_pct": 46.4,
+          "insight": "Memory-informed decisions outperform blind exploration"
+        }
+      ],
+      "best_rmse": 0.6532,
+      "consecutive_failures": 0
+    }
+  },
+  "global_best_rmse": 0.6532,
+  "key_learnings": [
+    "Combine fingerprints (local) with descriptors (global)",
+    "HistGradientBoosting outperforms RandomForest with good features"
+  ]
+}
+```
+
+**What gets remembered:**
+- **What worked** - with reasoning and improvement percentage
+- **What failed** - with reasoning and WHY it failed
+- **Key learnings** - actionable insights for future runs
+
+The Hypothesis Agent sees this context and can:
+- Build on successful approaches
+- Avoid repeating failures
+- Combine winning strategies
+
+### Stuck Detection & Exploration Mode
+
+The system detects when agents are stuck and triggers exploration mode:
+
+**Two-level detection:**
+1. **Per-run stuck**: 3+ consecutive failures in the current run
+2. **Global stagnation**: No improvement in the last 5 experiments across all runs
+
+**When stuck, agents see:**
+```
+### EXPLORATION MODE REQUIRED
+**GLOBAL STAGNATION: No improvement in recent experiments.
+Current approaches have been exhausted.**
+
+You MUST propose something RADICALLY DIFFERENT from what's been tried.
+Look at 'What Failed' and 'What Worked' - then think outside that box.
+Consider: different model families, different feature representations,
+simplification instead of complexity, or entirely new scientific angles.
+```
+
+This prevents agents from getting trapped in local optima and encourages creative exploration of the solution space.
+
+## Hallucinations vs Truth
+
+LLMs can hallucinate numbers in their reports. We handle this:
+
+| Component | Can Hallucinate? | Source of Truth |
+|-----------|------------------|-----------------|
+| Agent proposals | Yes (harmless) | Just text suggestions |
+| Agent RMSE reports | Yes (dangerous) | **Python evaluation** |
+| Improvement decisions | No | `run_training()` in Python |
+| Memory records | No | Actual measured RMSE values |
+
+**The memory is the pudding** - agents may claim "WORSE" when it's actually better, but:
+1. Python runs the actual training
+2. Python compares actual RMSE values
+3. Python decides commit vs revert
+4. Memory records what actually happened
+
+Agent text output is for observability, not decisions.
 
 ## Safety Features
 
 - **Baseline preservation**: `baseline_train.py` is never modified
 - **Branch isolation**: Each run on its own branch
-- **Fixed evaluation**: `evaluate.py` is never modified (prevents gaming)
+- **Fixed evaluation**: Python evaluation harness (no LLM involvement)
+- **Code validation**: ML Engineer runs ruff+pyright before finishing
 - **Experiment logging**: Every run logged with timestamps
 - **Timeout**: Training must complete in 60 seconds
 - **Revert on failure**: Bad changes don't persist
 - **Git audit trail**: Every improvement is a commit
+- **Memory persistence**: Learnings survive across runs
 
 ## Example Results
 
-**Run 001** (first iteration):
+**Run 001** (5 iterations with memory):
 - Baseline RMSE: 1.3175
-- Final RMSE: 1.0747
-- Improvement: **18.43%**
+- Final RMSE: 0.6532
+- Improvement: **50.4%**
 
-The agent proposed adding physicochemical descriptors (MolLogP, MolWt, NumRotatableBonds, HeavyAtomCount) to the Morgan fingerprints, correctly identifying that solubility depends on global molecular properties not captured by local structural fingerprints alone.
+**Iteration progression:**
+1. Combined HistGradientBoosting + physicochemical descriptors → 46% improvement
+2. Fine-tuned learning rate → +0.2%
+3. Added aromatic proportion feature → +1.5%
+4. Tried regularization (failed, reverted)
+5. Optimized feature combination → +5.9%
 
-See `experiments/run_001/run_001.md` for detailed analysis.
+**Key insight:** The agent learned from memory that MolLogP and MolWt are critical (from seeded experiments), then strategically combined HistGradientBoosting with all successful descriptors. Memory-informed decisions outperformed blind exploration.
 
 ## Why This Architecture
 
