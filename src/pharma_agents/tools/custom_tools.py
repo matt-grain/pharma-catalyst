@@ -41,22 +41,22 @@ class CodeCheckTool(BaseTool):
 
         train_path = get_experiments_dir() / "train.py"
 
-        # Run ruff for syntax and linting
+        # Run ruff through uv (ruff is a dev dependency, not on system PATH)
         try:
             result = subprocess.run(
-                ["ruff", "check", str(train_path), "--output-format=text"],
+                ["uv", "run", "ruff", "check", str(train_path), "--output-format=full"],
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
             if result.returncode != 0:
-                # Ruff outputs errors to stdout, but check both
+                # Ruff outputs errors to stdout
                 output = result.stdout.strip() or result.stderr.strip()
                 if output:
                     return f"ERRORS FOUND - Fix these before finishing:\n{output}"
                 return "ERRORS FOUND but no details (exit code non-zero)"
         except FileNotFoundError:
-            return "ERROR: ruff not installed. Run: pip install ruff"
+            return "ERROR: uv not found"
         except Exception as e:
             return f"ERROR running ruff: {e}"
 
