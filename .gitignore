@@ -9,3 +9,6 @@ build/
 
 # Run logs (stay local)
 experiments/run_*/
+
+# Worktrees (isolated run environments)
+.worktrees/

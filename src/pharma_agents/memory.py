@@ -5,6 +5,7 @@ Stores experiment history across runs so agents can learn from past attempts.
 """
 
 import json
+import os
 import re
 from pathlib import Path
 from datetime import datetime
@@ -13,7 +14,13 @@ from typing import Optional
 
 
 def get_experiments_dir() -> Path:
-    """Get the experiments directory path."""
+    """Get the experiments directory path.
+
+    Can be overridden via PHARMA_EXPERIMENTS_DIR env var (used for worktrees).
+    """
+    override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
+    if override:
+        return Path(override)
     return Path(__file__).parent.parent.parent / "experiments"
 
 
