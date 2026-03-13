@@ -580,4 +580,8 @@ def promote(run_number: int) -> None:
 
 
 if __name__ == "__main__":
-    run(iterations=5)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    iterations = int(os.environ.get("MAX_ITERATIONS", "5"))
+    run(iterations=iterations)
