@@ -39,3 +39,16 @@ implement_task:
   expected_output: >
     Confirmation that train.py passes code_check with no errors
   agent: model_agent
+
+evaluate_task:
+  description: >
+    Run the modified train.py and evaluate results.
+
+    Steps:
+    1. Use run_train_py tool to execute train.py
+    2. Report the score obtained
+
+    Just run and report - no modifications at this stage.
+  expected_output: >
+    The score result from running train.py
+  agent: model_agent
