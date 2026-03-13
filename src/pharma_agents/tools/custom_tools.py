@@ -40,7 +40,6 @@ class CodeCheckTool(BaseTool):
         import subprocess
 
         train_path = get_experiments_dir() / "train.py"
-        errors = []
 
         # Run ruff for syntax and linting
         try:
@@ -51,12 +50,16 @@ class CodeCheckTool(BaseTool):
                 timeout=30,
             )
             if result.returncode != 0:
-                errors.append(f"RUFF ERRORS:\n{result.stdout}")
+                # Ruff outputs errors to stdout, but check both
+                output = result.stdout.strip() or result.stderr.strip()
+                if output:
+                    return f"ERRORS FOUND - Fix these before finishing:\n{output}"
+                return "ERRORS FOUND but no details (exit code non-zero)"
+        except FileNotFoundError:
+            return "ERROR: ruff not installed. Run: pip install ruff"
         except Exception as e:
-            errors.append(f"Ruff error: {e}")
+            return f"ERROR running ruff: {e}"
 
-        if errors:
-            return "ERRORS FOUND - Fix these before finishing:\n" + "\n".join(errors)
         return "OK - No linting errors. Code is ready."
 
 
