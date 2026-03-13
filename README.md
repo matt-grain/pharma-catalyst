@@ -96,30 +96,39 @@ uv run python -m pharma_agents.main
 
 ## Git Workflow
 
-Each run creates its own branch, keeping `main` clean at baseline.
+Each run uses an **isolated worktree**, keeping `main` completely untouched.
 
 ```
-main (baseline RMSE: 1.3175)
+pharma-catalyst/
   │
-  ├── run/001 ──► agents iterate, commits improvements
-  │     │
-  │     └── [promote] ──► merges to main, updates baseline
+  ├── main branch (baseline, never touched during runs)
   │
-  ├── run/002 ──► fresh start from baseline (or new baseline)
-  │
-  └── run/003 ──► ...
+  └── .worktrees/
+        ├── run_001/ ──► isolated copy, agents iterate here
+        │     └── branch: run/001
+        │
+        ├── run_002/ ──► another isolated copy
+        │     └── branch: run/002
+        │
+        └── ...
 ```
+
+**Why worktrees?**
+- No stash/conflict issues when switching runs
+- Main stays clean - no accidental commits
+- Can run multiple experiments in parallel
+- Clean discard: just remove the worktree
 
 ### Commands
 
 ```bash
-# Start a new run (creates branch run/XXX, resets to baseline)
+# Start a new run (creates worktree + branch)
 uv run python -m pharma_agents.main
 
 # Promote a successful run to main (makes it the new baseline)
 uv run python -m pharma_agents.promote 1
 
-# Discard a cancelled/stuck run (cleans memory, deletes branch)
+# Discard a cancelled/stuck run (removes worktree, memory entry, branch)
 uv run python -m pharma_agents.discard 2
 uv run python -m pharma_agents.discard 2 --keep-logs  # keep log files
 
@@ -127,15 +136,15 @@ uv run python -m pharma_agents.discard 2 --keep-logs  # keep log files
 uv run python -m pharma_agents.tools.reset
 
 # Compare runs
-git diff run/001..run/002 -- src/pharma_agents/tools/train.py
+git diff run/001..run/002 -- experiments/train.py
 ```
 
 ### What happens during a run
 
-1. **Branch creation**: `run/XXX` branch created from `main`
-2. **Reset**: `train.py` reset to `baseline_train.py`
-3. **Baseline commit**: Initial state committed
-4. **Iterations**: Agents propose/implement/evaluate
+1. **Worktree creation**: `.worktrees/run_XXX/` created from `main`
+2. **Reset**: `train.py` reset to `baseline_train.py` (in worktree)
+3. **Baseline commit**: Initial state committed to `run/XXX` branch
+4. **Iterations**: Agents propose/implement/evaluate (all in worktree)
    - Improvement → commit to branch
    - No improvement → revert changes
 5. **Summary**: Final RMSE and git log displayed
@@ -176,13 +185,15 @@ pharma-catalyst/
 │   └── data/
 │       ├── fetch.py             # Download dataset
 │       └── esol.csv             # ESOL dataset (1,128 molecules)
-├── experiments/                 # Experiment-specific (mutable)
+├── experiments/                 # Shared experiment data (stays in main)
 │   ├── baseline.json            # Baseline config (metric, score, direction)
 │   ├── baseline_train.py        # BASELINE code (never modified by agents)
-│   ├── train.py                 # Working copy (agents modify this)
-│   ├── memory.json              # Persistent agent memory
+│   ├── memory.json              # Persistent agent memory (shared)
 │   ├── run_001/                 # Logs for run 1
 │   └── run_002/                 # Logs for run 2
+├── .worktrees/                  # Isolated run environments (gitignored)
+│   ├── run_001/                 # Worktree for run 1
+│   └── run_002/                 # Worktree for run 2
 ├── .env                         # API keys (GOOGLE_API_KEY, LLM_MODEL)
 ├── pyproject.toml
 └── README.md
