@@ -105,6 +105,15 @@ def git_commit_change(repo_path: Path, message: str) -> bool:
             check=True,
             capture_output=True,
         )
+        # Check if there are staged changes
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=repo_path,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            logger.info("No changes to commit (already at this state)")
+            return True
         subprocess.run(
             ["git", "commit", "-m", message],
             cwd=repo_path,

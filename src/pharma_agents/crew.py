@@ -94,6 +94,7 @@ class PharmaAgentsCrew:
         """Task: Implement the proposed change."""
         return Task(
             config=self.tasks_config["implement_task"],
+            context=[self.hypothesis_task()],
         )
 
     @task
@@ -101,6 +102,7 @@ class PharmaAgentsCrew:
         """Task: Run and evaluate the change."""
         return Task(
             config=self.tasks_config["evaluate_task"],
+            context=[self.hypothesis_task(), self.implement_task()],
         )
 
     @crew

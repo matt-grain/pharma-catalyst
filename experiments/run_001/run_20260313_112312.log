@@ -1,0 +1,67 @@
+2026-03-13 11:23:12 | INFO     | Logging to C:\Projects\Interviews\jobs\Sanofi-AI-ML-Lead\pharma-agents\experiments\run_001\run_20260313_112312.log
+2026-03-13 11:23:12 | INFO     | ============================================================
+2026-03-13 11:23:12 | INFO     | PHARMA-AGENTS: Autonomous Molecular ML Optimization
+2026-03-13 11:23:12 | INFO     | Run #1 on branch: run/001
+2026-03-13 11:23:12 | INFO     | ============================================================
+2026-03-13 11:23:12 | INFO     | Reset train.py to baseline
+2026-03-13 11:23:12 | INFO     | Establishing baseline...
+2026-03-13 11:23:16 | INFO     | Baseline RMSE: 1.3175
+2026-03-13 11:23:17 | WARNING  | Git commit failed: Command '['git', 'commit', '-m', '[Run 1] Baseline: RMSE 1.3175']' returned non-zero exit status 1.
+2026-03-13 11:23:18 | INFO     |
+2026-03-13 11:23:18 | INFO     | ============================================================
+2026-03-13 11:23:18 | INFO     | ITERATION 1/5
+2026-03-13 11:23:18 | INFO     | ============================================================
+2026-03-13 11:23:18 | INFO     | Current best RMSE: 1.3175
+2026-03-13 11:23:18 | INFO     | Running agent crew...
+2026-03-13 11:23:18 | ERROR    | Crew error: Missing required template variable 'Template variable 'proposal' not found in inputs dictionary' in description
+2026-03-13 11:23:19 | INFO     | Reverted train.py to last committed version
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | ITERATION 2/5
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | Current best RMSE: 1.3175
+2026-03-13 11:23:19 | INFO     | Running agent crew...
+2026-03-13 11:23:19 | ERROR    | Crew error: Missing required template variable 'Template variable 'proposal' not found in inputs dictionary' in description
+2026-03-13 11:23:19 | INFO     | Reverted train.py to last committed version
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | ITERATION 3/5
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | Current best RMSE: 1.3175
+2026-03-13 11:23:19 | INFO     | Running agent crew...
+2026-03-13 11:23:19 | ERROR    | Crew error: Missing required template variable 'Template variable 'proposal' not found in inputs dictionary' in description
+2026-03-13 11:23:19 | INFO     | Reverted train.py to last committed version
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | ITERATION 4/5
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | Current best RMSE: 1.3175
+2026-03-13 11:23:19 | INFO     | Running agent crew...
+2026-03-13 11:23:19 | ERROR    | Crew error: Missing required template variable 'Template variable 'proposal' not found in inputs dictionary' in description
+2026-03-13 11:23:19 | INFO     | Reverted train.py to last committed version
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | ITERATION 5/5
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | Current best RMSE: 1.3175
+2026-03-13 11:23:19 | INFO     | Running agent crew...
+2026-03-13 11:23:19 | ERROR    | Crew error: Missing required template variable 'Template variable 'proposal' not found in inputs dictionary' in description
+2026-03-13 11:23:19 | INFO     | Reverted train.py to last committed version
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | SUMMARY
+2026-03-13 11:23:19 | INFO     | ============================================================
+2026-03-13 11:23:19 | INFO     | Initial RMSE:  1.3175
+2026-03-13 11:23:19 | INFO     | Final RMSE:    1.3175
+2026-03-13 11:23:19 | SUCCESS  | Total Improvement: 0.0%
+2026-03-13 11:23:19 | INFO     | Experiments:   0
+2026-03-13 11:23:19 | INFO     | Log dir:       C:\Projects\Interviews\jobs\Sanofi-AI-ML-Lead\pharma-agents\experiments
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | Git history (run/001):
+2026-03-13 11:23:19 | INFO     |   86ff3cd chore: add pre-commit hooks (ruff, formatting)
+2026-03-13 11:23:19 | INFO     |   40b7e94 chore: remove test script
+2026-03-13 11:23:19 | INFO     |   e8336ad chore: clean experiments folder for fresh start
+2026-03-13 11:23:19 | INFO     |   8165f06 Initial commit: baseline ESOL solubility prediction (RMSE 1.3175)
+2026-03-13 11:23:19 | INFO     |
+2026-03-13 11:23:19 | INFO     | To promote this run as new baseline:
+2026-03-13 11:23:19 | INFO     |   uv run python -m pharma_agents.promote 1

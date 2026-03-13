@@ -21,17 +21,16 @@ hypothesis_task:
 
 implement_task:
   description: >
-    Implement the following change in train.py:
-
-    {proposal}
+    Implement the proposal from the Research Scientist in train.py.
 
     Rules:
-    - Modify ONLY train.py
+    - Modify ONLY train.py (located at src/pharma_agents/tools/train.py)
     - Keep the same function signature: train() -> float (returns RMSE)
     - Ensure code is syntactically correct
     - Do not modify evaluate.py or any other files
+    - Use the file_write tool to save your changes
   expected_output: >
-    Modified train.py code that implements the proposal
+    Confirmation that train.py has been modified with the proposed change
   agent: model_agent
 
 evaluate_task:
