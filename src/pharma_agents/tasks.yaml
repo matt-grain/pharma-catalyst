@@ -1,0 +1,54 @@
+hypothesis_task:
+  description: >
+    Review the experiment history and current train.py implementation.
+    Propose ONE specific change to improve {property} prediction RMSE.
+
+    Current baseline RMSE: {baseline_rmse}
+    Previous experiments: {experiment_history}
+
+    Your proposal must be:
+    1. Specific and implementable (not vague like "try different models")
+    2. Different from previous failed attempts
+    3. Justified with reasoning
+
+    Output format:
+    PROPOSAL: [one-line description]
+    CHANGE: [specific code change needed]
+    REASONING: [why this might improve RMSE]
+  expected_output: >
+    A specific, implementable proposal for improving the model
+  agent: hypothesis_agent
+
+implement_task:
+  description: >
+    Implement the following change in train.py:
+
+    {proposal}
+
+    Rules:
+    - Modify ONLY train.py
+    - Keep the same function signature: train() -> float (returns RMSE)
+    - Ensure code is syntactically correct
+    - Do not modify evaluate.py or any other files
+  expected_output: >
+    Modified train.py code that implements the proposal
+  agent: model_agent
+
+evaluate_task:
+  description: >
+    Run the modified train.py and evaluate results.
+
+    1. Execute train.py
+    2. Record the RMSE
+    3. Compare to baseline: {baseline_rmse}
+    4. Recommend: KEEP (if improved) or REVERT (if worse or failed)
+
+    Output format:
+    RMSE: [value]
+    BASELINE: {baseline_rmse}
+    IMPROVEMENT: [percentage or "WORSE"]
+    RECOMMENDATION: [KEEP or REVERT]
+    NOTES: [any observations]
+  expected_output: >
+    Evaluation report with RMSE, comparison, and recommendation
+  agent: evaluator_agent
