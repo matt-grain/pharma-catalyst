@@ -37,11 +37,11 @@ def generate_run_report(
     """
     higher_is_better = direction == "higher_is_better"
 
-    # Extract data for charts
-    iterations = []
-    scores = []
-    results = []
-    hypotheses = []
+    # Extract data for charts - start with baseline at iteration 0
+    iterations = [0]
+    scores = [baseline_score]
+    results = ["baseline"]
+    hypotheses = ["Baseline"]
 
     for exp in experiments:
         iterations.append(exp["iteration"])
@@ -75,7 +75,10 @@ def generate_run_report(
     )
 
     # Chart 1: Score progression line chart
-    colors = ["green" if r == "success" else "red" for r in results]
+    colors = [
+        "#6C757D" if r == "baseline" else "#28A745" if r == "success" else "#DC3545"
+        for r in results
+    ]
     fig.add_trace(
         go.Scatter(
             x=iterations,
