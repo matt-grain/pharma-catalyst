@@ -502,6 +502,21 @@ def run(iterations: int = 10) -> None:
     logger.info(f"Experiments:   {len(experiment_history)}")
     logger.info(f"Log dir:       {run_log_dir}")
 
+    # Generate HTML report with charts
+    from .report import generate_run_report
+    from .memory import get_metric_direction
+
+    report_path = generate_run_report(
+        run_id=run_number,
+        experiment_name=experiment_name,
+        metric=metric,
+        direction=get_metric_direction(),
+        baseline_score=baseline_score,
+        experiments=experiment_history,
+        output_dir=run_log_dir,
+    )
+    logger.info(f"Report:        {report_path}")
+
     # Print summary to stdout
     print(f"\n{'=' * 60}")
     print("SUMMARY")
@@ -511,6 +526,7 @@ def run(iterations: int = 10) -> None:
     print(f"Total Improvement: {total_improvement:.1f}%")
     print(f"Experiments:       {len(experiment_history)}")
     print(f"Log file:          {log_file}")
+    print(f"Report:            {report_path}")
 
     # Show git log (from worktree to see run-specific commits)
     logger.info("")
