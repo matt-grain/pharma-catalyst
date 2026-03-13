@@ -5,14 +5,41 @@ This module defines the agent crew that autonomously iterates on
 molecular property prediction models.
 """
 
+import time
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import FileReadTool
 from pathlib import Path
 from dotenv import load_dotenv
+from loguru import logger
 import os
 
 from .tools.custom_tools import WriteTrainPyTool, RunTrainPyTool
+
+
+class LoggingLLM(LLM):
+    """LLM wrapper that logs call duration."""
+
+    _call_count: int = 0
+
+    def call(self, *args, **kwargs):
+        LoggingLLM._call_count += 1
+        call_id = LoggingLLM._call_count
+        logger.info(f"LLM CALL #{call_id} START | {self.model}")
+        print(f"[LLM #{call_id}] Calling {self.model}...")
+        start = time.perf_counter()
+        try:
+            result = super().call(*args, **kwargs)
+            duration = time.perf_counter() - start
+            logger.info(f"LLM CALL #{call_id} OK | {duration:.2f}s")
+            print(f"[LLM #{call_id}] Done in {duration:.2f}s")
+            return result
+        except Exception as e:
+            duration = time.perf_counter() - start
+            logger.error(f"LLM CALL #{call_id} FAIL | {duration:.2f}s | {e}")
+            print(f"[LLM #{call_id}] FAILED after {duration:.2f}s: {e}")
+            raise
+
 
 # Load .env file
 load_dotenv()
@@ -21,7 +48,7 @@ load_dotenv()
 # Configure Gemini as the LLM
 def get_llm() -> LLM:
     """Get configured LLM (Gemini by default)."""
-    return LLM(
+    return LoggingLLM(
         model="gemini/gemini-3-flash-preview",
         api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0.7,
