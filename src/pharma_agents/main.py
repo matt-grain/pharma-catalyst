@@ -161,16 +161,19 @@ def git_commit_change(repo_path: Path, message: str) -> bool:
         if result.returncode == 0:
             logger.info("No changes to commit (already at this state)")
             return True
-        subprocess.run(
+        result = subprocess.run(
             ["git", "commit", "-m", message],
             cwd=repo_path,
-            check=True,
             capture_output=True,
+            text=True,
         )
+        if result.returncode != 0:
+            logger.warning(f"Git commit failed: {result.stderr or result.stdout}")
+            return False
         logger.info(f"Committed: {message}")
         return True
     except subprocess.CalledProcessError as e:
-        logger.warning(f"Git commit failed: {e}")
+        logger.warning(f"Git commit error: {e}")
         return False
 
 

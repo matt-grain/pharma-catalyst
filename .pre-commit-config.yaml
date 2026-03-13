@@ -1,20 +1,27 @@
 repos:
+  # All hooks run on push only - allows agents to commit freely during experiment runs
+  # Quality checks happen before sharing code, not during rapid iteration
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.10
     hooks:
       - id: ruff
         args: [--fix]
+        stages: [pre-push]
       - id: ruff-format
+        stages: [pre-push]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        stages: [pre-push]
       - id: end-of-file-fixer
+        stages: [pre-push]
       - id: check-yaml
+        stages: [pre-push]
       - id: check-added-large-files
+        stages: [pre-push]
 
-  # Pyright only on push (not commit) - allows experimentation, catches errors before sharing
   - repo: local
     hooks:
       - id: pyright
@@ -23,4 +30,4 @@ repos:
         language: system
         types: [python]
         stages: [pre-push]
-        exclude: ^src/pharma_agents/tools/train\.py$  # Agents modify this, skip it
+        exclude: ^experiments/train\.py$  # Agents modify this, skip type checking
