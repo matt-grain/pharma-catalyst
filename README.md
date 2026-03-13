@@ -81,18 +81,40 @@ CPU-friendly. No GPU required. Trains in <1 second.
 # Install dependencies
 uv sync
 
-# Set your LLM API key (Gemini example)
-export GOOGLE_API_KEY="your-key-here"
+# Configure API keys (see Configuration section below)
+cp .env.example .env
+# Edit .env with your GOOGLE_API_KEY
 
-# Download ESOL dataset (one-time)
+# Download datasets (one-time)
 uv run python -m pharma_agents.data.fetch
 
-# Run baseline training
+# Run baseline training (verify setup)
 uv run python -m pharma_agents.tools.train
 
 # Run the agent crew (5 iterations by default)
-uv run python -m pharma_agents.main
+uv run python -m pharma_agents.main --experiment bbbp
 ```
+
+## Configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Required: Google API Key for Gemini
+GOOGLE_API_KEY=your-key-here
+
+# Optional: LLM Model (defaults to gemini-3-flash-preview)
+# Options: gemini/gemini-3-flash-preview, gemini/gemini-2.0-flash, gemini/gemini-1.5-pro
+LLM_MODEL=gemini/gemini-3-flash-preview
+```
+
+**Environment variables (optional):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PHARMA_EXPERIMENT` | `bbbp` | Which experiment to run (`bbbp`, `solubility`) |
+| `MAX_ITERATIONS` | `5` | Number of improvement iterations per run |
+| `PHARMA_EXPERIMENTS_DIR` | (auto) | Override experiments path (for worktrees) |
 
 ## Git Workflow
 

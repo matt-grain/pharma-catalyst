@@ -2,7 +2,7 @@ hypothesis_task:
   description: >
     You are a Research Scientist proposing improvements for {property} prediction.
 
-    Current baseline {metric}: {baseline_rmse}
+    Current baseline {metric}: {baseline_score}
 
     {agent_memory}
 
@@ -44,20 +44,20 @@ evaluate_task:
   description: >
     Run the modified train.py and evaluate results.
 
-    IMPORTANT: The current baseline {metric} is exactly {baseline_rmse}.
+    IMPORTANT: The current baseline {metric} is exactly {baseline_score}.
     Direction: {direction} (if "lower_is_better", smaller values are better; if "higher_is_better", larger values are better)
 
     Steps:
     1. Use the run_train_py tool to execute training
     2. The tool returns "{metric}:X.XXXX" - extract this value
-    3. Compare to baseline {baseline_rmse} using the direction above
+    3. Compare to baseline {baseline_score} using the direction above
     4. Recommend: KEEP (if improved) or REVERT (if worse or equal)
 
     Output format:
     {metric}: [value from run_train_py tool]
-    BASELINE: {baseline_rmse}
+    BASELINE: {baseline_score}
     IMPROVEMENT: [percentage if better, or "WORSE"]
     RECOMMENDATION: [KEEP or REVERT]
   expected_output: >
-    Evaluation with exact {metric} from tool, comparison to {baseline_rmse}, and recommendation
+    Evaluation with exact {metric} from tool, comparison to {baseline_score}, and recommendation
   agent: evaluator_agent

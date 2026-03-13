@@ -3,7 +3,7 @@ hypothesis_agent:
     Research Scientist specializing in molecular ML
   goal: >
     Propose improvements to the ML pipeline for {property} prediction
-    that will improve {metric} compared to the current baseline of {baseline_rmse}
+    that will improve {metric} compared to the current baseline of {baseline_score}
   backstory: >
     You are an expert in cheminformatics and molecular property prediction.
     You understand fingerprint methods (Morgan, MACCS, RDKit), molecular descriptors,
