@@ -38,7 +38,11 @@ def load_data() -> tuple[np.ndarray, np.ndarray]:
     # Data is in src/pharma_agents/data/ (shared across experiments)
     # Path: experiments/bbbp/ -> project_root/src/pharma_agents/data/
     data_path = (
-        Path(__file__).parent.parent.parent / "src" / "pharma_agents" / "data" / "bbbp.csv"
+        Path(__file__).parent.parent.parent
+        / "src"
+        / "pharma_agents"
+        / "data"
+        / "bbbp.csv"
     )
     df = pd.read_csv(data_path)
 
@@ -69,7 +73,9 @@ def train(verbose: bool = True) -> float:
     load_time = time.perf_counter() - t0
     if verbose:
         print(f"      Loaded {len(y)} molecules in {load_time:.2f}s")
-        print(f"      Class distribution: {sum(y)} positive, {len(y) - sum(y)} negative")
+        print(
+            f"      Class distribution: {sum(y)} positive, {len(y) - sum(y)} negative"
+        )
 
     # Split
     if verbose:

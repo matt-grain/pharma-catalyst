@@ -9,7 +9,6 @@ import time
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import FileReadTool
-from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 import os
@@ -72,6 +71,7 @@ class PharmaAgentsCrew:
 
     def __init__(self):
         from .memory import get_experiments_dir
+
         self.experiments_dir = get_experiments_dir()
 
     @agent

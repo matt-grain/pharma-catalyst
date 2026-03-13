@@ -126,7 +126,9 @@ def git_get_next_run_number(repo_path: Path, experiment: str) -> int:
     return max(run_numbers, default=0) + 1
 
 
-def git_create_worktree(repo_path: Path, experiment: str, run_number: int) -> tuple[str, Path]:
+def git_create_worktree(
+    repo_path: Path, experiment: str, run_number: int
+) -> tuple[str, Path]:
     """Create a worktree for this run, isolated from main.
 
     Returns (branch_name, worktree_path).
@@ -308,7 +310,9 @@ def run(iterations: int = 10) -> None:
 
     # Create isolated worktree for this run (per-experiment numbering)
     run_number = git_get_next_run_number(project_root, experiment_name)
-    branch_name, worktree_path = git_create_worktree(project_root, experiment_name, run_number)
+    branch_name, worktree_path = git_create_worktree(
+        project_root, experiment_name, run_number
+    )
 
     # Paths for this run (in worktree, experiment-specific)
     experiments_dir = worktree_path / "experiments" / experiment_name
@@ -373,6 +377,7 @@ def run(iterations: int = 10) -> None:
 
         # Prepare inputs for the crew
         from .memory import get_metric_direction, get_baseline_config
+
         config = get_baseline_config()
         inputs = {
             "property": config.get("property", "molecular property"),
@@ -606,12 +611,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run pharma-agents experiment")
     parser.add_argument(
-        "--experiment", "-e",
+        "--experiment",
+        "-e",
         default=os.environ.get("PHARMA_EXPERIMENT", "bbbp"),
         help="Experiment to run: 'bbbp' or 'solubility' (default: bbbp)",
     )
     parser.add_argument(
-        "--iterations", "-n",
+        "--iterations",
+        "-n",
         type=int,
         default=int(os.environ.get("MAX_ITERATIONS", "5")),
         help="Number of iterations (default: 5 or MAX_ITERATIONS env var)",

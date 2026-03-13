@@ -3,7 +3,6 @@
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from loguru import logger
@@ -11,7 +10,9 @@ from loguru import logger
 from .memory import AgentMemory, get_experiment_name
 
 
-def discard(run_number: int, experiment: str | None = None, keep_logs: bool = False) -> None:
+def discard(
+    run_number: int, experiment: str | None = None, keep_logs: bool = False
+) -> None:
     """
     Discard a run - remove worktree, memory entry, branch, and optionally logs.
 
@@ -87,7 +88,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Discard a run")
     parser.add_argument("run_number", type=int, help="Run number to discard")
     parser.add_argument(
-        "--experiment", "-e",
+        "--experiment",
+        "-e",
         default=os.environ.get("PHARMA_EXPERIMENT", "bbbp"),
         help="Experiment name (default: bbbp)",
     )

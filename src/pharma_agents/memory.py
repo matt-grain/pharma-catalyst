@@ -329,7 +329,10 @@ class AgentMemory:
         for exp in recent:
             if exp.result == "success" and exp.rmse_after:
                 # Check if this experiment matched or beat global best
-                if is_better(exp.rmse_after, self.global_best_rmse) or exp.rmse_after == self.global_best_rmse:
+                if (
+                    is_better(exp.rmse_after, self.global_best_rmse)
+                    or exp.rmse_after == self.global_best_rmse
+                ):
                     return False  # Recent improvement exists
 
         return True  # No improvements in last N experiments

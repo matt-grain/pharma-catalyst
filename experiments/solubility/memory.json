@@ -1,1 +1,197 @@
-{"runs": {}, "global_best_rmse": 1.3175, "key_learnings": []}
+{
+  "runs": {
+    "0": {
+      "run_id": 0,
+      "start_time": "2026-03-13T09:30:00",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T09:30:00",
+          "hypothesis": "Add physicochemical descriptors (MolLogP, MolWt, NumRotatableBonds, HeavyAtomCount) to Morgan fingerprints",
+          "reasoning": "Morgan fingerprints capture local substructures but miss global properties. Solubility (logS) is primarily determined by lipophilicity (LogP) and molecular size (MolWt) as established in the Delaney ESOL paper.",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 1.0747,
+          "improvement_pct": 18.43,
+          "insight": "MolLogP and MolWt are critical drivers of aqueous solubility. Combining fingerprints (local structure) with descriptors (global properties) significantly improves prediction."
+        }
+      ],
+      "best_rmse": 1.0747,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Run 0 achieved 18.4% improvement with physicochemical descriptors. Early termination - more iterations could yield further gains. Try gradient boosting or additional features."
+    },
+    "1": {
+      "run_id": 1,
+      "start_time": "2026-03-13T11:52:00",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T11:54:35",
+          "hypothesis": "Combine HistGradientBoostingRegressor with five physicochemical descriptors (MolLogP, MolWt, NumRotatableBonds, HeavyAtomCount, AromaticProportion)",
+          "reasoning": "Building on both successful approaches from memory: gradient boosting and physicochemical descriptors. Combining proven strategies should yield cumulative improvement.",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.7061,
+          "improvement_pct": 46.4,
+          "insight": "Strategic combination of two successful approaches (HistGradientBoosting + descriptors) yielded massive improvement. Memory-informed decisions outperform blind exploration."
+        },
+        {
+          "iteration": 2,
+          "timestamp": "2026-03-13T11:56:08",
+          "hypothesis": "Fine-tune learning rate to 0.05 and increase iterations",
+          "reasoning": "Lower learning rate with more iterations often improves generalization.",
+          "result": "success",
+          "rmse_before": 0.7061,
+          "rmse_after": 0.7044,
+          "improvement_pct": 0.24,
+          "insight": "Marginal improvement from hyperparameter tuning - feature engineering was the dominant factor."
+        },
+        {
+          "iteration": 3,
+          "timestamp": "2026-03-13T11:58:02",
+          "hypothesis": "Add aromatic proportion as additional feature",
+          "reasoning": "Aromatic rings affect solubility through pi-stacking interactions with water.",
+          "result": "success",
+          "rmse_before": 0.7044,
+          "rmse_after": 0.694,
+          "improvement_pct": 1.48,
+          "insight": "Aromatic proportion provides additional predictive signal beyond MolLogP."
+        },
+        {
+          "iteration": 4,
+          "timestamp": "2026-03-13T12:00:05",
+          "hypothesis": "Add L2 regularization to prevent overfitting",
+          "reasoning": "Regularization might help generalization on small dataset.",
+          "result": "failure",
+          "rmse_before": 0.694,
+          "rmse_after": 0.6962,
+          "improvement_pct": -0.32,
+          "insight": "L2 regularization did not help - model was not overfitting. Current feature set is well-suited to data size."
+        },
+        {
+          "iteration": 5,
+          "timestamp": "2026-03-13T12:02:32",
+          "hypothesis": "Optimize feature combination and model parameters together",
+          "reasoning": "Final optimization pass combining all successful elements.",
+          "result": "success",
+          "rmse_before": 0.694,
+          "rmse_after": 0.6532,
+          "improvement_pct": 5.88,
+          "insight": "Final optimization achieved 50.4% total improvement from baseline. Diminishing returns suggest we're approaching optimal performance for this feature set."
+        }
+      ],
+      "best_rmse": 0.6532,
+      "consecutive_failures": 0,
+      "conclusion": "LOCAL_OPTIMUM",
+      "conclusion_detail": "Run 1 achieved 50.4% total improvement reaching RMSE 0.6532. HistGradientBoosting + physicochemical descriptors maximized. Hyperparameter tuning shows diminishing returns. Future runs should try: different model architectures, GNN-based features, or ensemble approaches."
+    },
+    "2": {
+      "run_id": 2,
+      "start_time": "2026-03-13T13:35:09",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T13:35:09",
+          "hypothesis": "HistGradientBoosting with 2048-bit fingerprints + 7 descriptors (MolLogP, MolWt, NumRotatableBonds, HeavyAtomCount, AromaticProportion, FractionCSP3, MolMR)",
+          "reasoning": "Expanding fingerprint size to 2048 bits reduces collisions. Adding FractionCSP3 and MolMR captures saturation and polarizability.",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.6811,
+          "improvement_pct": 48.3,
+          "insight": "Achieved 48.3% improvement with expanded features."
+        },
+        {
+          "iteration": 2,
+          "timestamp": "2026-03-13T13:37:43",
+          "hypothesis": "Further feature engineering attempts",
+          "reasoning": "Trying additional modifications.",
+          "result": "failure",
+          "rmse_before": 0.6811,
+          "rmse_after": 0.8031,
+          "improvement_pct": -17.9,
+          "insight": "Regression - changes made model worse."
+        },
+        {
+          "iteration": 3,
+          "timestamp": "2026-03-13T13:42:00",
+          "hypothesis": "Alternative approach",
+          "reasoning": "Trying different modifications.",
+          "result": "failure",
+          "rmse_before": 0.6811,
+          "rmse_after": 0.6828,
+          "improvement_pct": -0.25,
+          "insight": "No improvement, marginal regression."
+        },
+        {
+          "iteration": 4,
+          "timestamp": "2026-03-13T13:45:01",
+          "hypothesis": "Final attempt",
+          "reasoning": "Last iteration.",
+          "result": "failure",
+          "rmse_before": 0.6811,
+          "rmse_after": 0.6977,
+          "improvement_pct": -2.4,
+          "insight": "No improvement after multiple attempts."
+        }
+      ],
+      "best_rmse": 0.6811,
+      "consecutive_failures": 3,
+      "conclusion": "STUCK",
+      "conclusion_detail": "Run 2 achieved 48.3% improvement in iteration 1, but then hit a wall with 3 consecutive failures. The expanded feature set (2048-bit FP + 7 descriptors) may have caused overfitting or the approach reached its limit."
+    },
+    "3": {
+      "run_id": 3,
+      "start_time": "2026-03-13T14:08:10.368950",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T14:08:10.370309",
+          "hypothesis": "Augment the molecular features by adding 167-bit MACCS keys and the Fraction of sp3 carbons (FractionCSP3)           \u2502",
+          "reasoning": "MACCS keys provide a complementary structural representation to Morgan fingerprints by explicitly encoding the      \u2502",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.6819,
+          "improvement_pct": 48.24288425047438,
+          "insight": "Achieved 48.2% improvement"
+        }
+      ],
+      "best_rmse": 0.6819,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 48.2% per success). Reached RMSE 0.6819. More iterations could yield improvements."
+    },
+    "4": {
+      "run_id": 4,
+      "start_time": "2026-03-13T14:27:27.176864",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T14:27:27.178301",
+          "hypothesis": "Enhance the feature representation by using 2048-bit Count-based Morgan Fingerprints and 167-bit MACCS keys, and     \u2502",
+          "reasoning": "Solubility is an additive property where the frequency of structural motifs (captured by Count-based fingerprints)  \u2502",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.6417,
+          "improvement_pct": 51.29411764705881,
+          "insight": "Achieved 51.3% improvement"
+        }
+      ],
+      "best_rmse": 0.6417,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 51.3% per success). Reached RMSE 0.6417. More iterations could yield improvements."
+    }
+  },
+  "global_best_rmse": 0.6417,
+  "key_learnings": [
+    "MolLogP is the most impactful single descriptor for solubility prediction",
+    "Combine fingerprints (local structure) with descriptors (global properties) for best results",
+    "HistGradientBoosting outperforms RandomForest when combined with good features",
+    "TPSA and H-bond features are redundant when MolLogP is already included",
+    "Keep max_depth regularization on small datasets to prevent overfitting",
+    "Strategic combination of proven approaches beats blind exploration",
+    "Hyperparameter tuning has diminishing returns compared to feature engineering"
+  ],
+  "last_updated": "2026-03-13T14:27:28.536145"
+}

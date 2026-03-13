@@ -38,7 +38,11 @@ def load_data() -> tuple[np.ndarray, np.ndarray]:
     # Data is in src/pharma_agents/data/ (shared across experiments)
     # Path: experiments/solubility/ -> project_root/src/pharma_agents/data/
     data_path = (
-        Path(__file__).parent.parent.parent / "src" / "pharma_agents" / "data" / "esol.csv"
+        Path(__file__).parent.parent.parent
+        / "src"
+        / "pharma_agents"
+        / "data"
+        / "esol.csv"
     )
     df = pd.read_csv(data_path)
 
