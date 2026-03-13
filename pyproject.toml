@@ -34,3 +34,11 @@ dev = [
     "ruff>=0.15.6",
     "ty>=0.0.23",
 ]
+
+[tool.ruff.lint]
+# Ignore unused variables in experiments (agent-generated code)
+# F841: local variable assigned but never used
+ignore = ["F841"]
+
+[tool.ruff.lint.per-file-ignores]
+"experiments/**/train.py" = ["F841", "E501"]  # Also allow long lines in agent code

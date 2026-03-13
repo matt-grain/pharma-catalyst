@@ -54,6 +54,7 @@ class CodeCheckTool(BaseTool):
         "Returns 'OK' if no issues, or lists errors to fix. "
         "ALWAYS run this AFTER writing code to ensure it will run correctly."
     )
+    cache_function: None = None  # Disable caching - always check fresh file state
 
     def _run(self, _: str = "") -> str:
         """Run ruff on train.py."""
