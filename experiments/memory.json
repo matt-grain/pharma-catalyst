@@ -160,9 +160,30 @@
       "consecutive_failures": 0,
       "conclusion": "PROGRESS_CONTINUING",
       "conclusion_detail": "Still making progress (avg 48.2% per success). Reached RMSE 0.6819. More iterations could yield improvements."
+    },
+    "4": {
+      "run_id": 4,
+      "start_time": "2026-03-13T14:27:27.176864",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-13T14:27:27.178301",
+          "hypothesis": "Enhance the feature representation by using 2048-bit Count-based Morgan Fingerprints and 167-bit MACCS keys, and     \u2502",
+          "reasoning": "Solubility is an additive property where the frequency of structural motifs (captured by Count-based fingerprints)  \u2502",
+          "result": "success",
+          "rmse_before": 1.3175,
+          "rmse_after": 0.6417,
+          "improvement_pct": 51.29411764705881,
+          "insight": "Achieved 51.3% improvement"
+        }
+      ],
+      "best_rmse": 0.6417,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 51.3% per success). Reached RMSE 0.6417. More iterations could yield improvements."
     }
   },
-  "global_best_rmse": 0.6532,
+  "global_best_rmse": 0.6417,
   "key_learnings": [
     "MolLogP is the most impactful single descriptor for solubility prediction",
     "Combine fingerprints (local structure) with descriptors (global properties) for best results",
@@ -172,5 +193,5 @@
     "Strategic combination of proven approaches beats blind exploration",
     "Hyperparameter tuning has diminishing returns compared to feature engineering"
   ],
-  "last_updated": "2026-03-13T14:08:11.747633"
+  "last_updated": "2026-03-13T14:27:28.536145"
 }

@@ -42,7 +42,7 @@ def discard(run_number: int, keep_logs: bool = False) -> None:
                 cwd=project_root,
                 capture_output=True,
             )
-            logger.info(f"Force-removed worktree directory")
+            logger.info("Force-removed worktree directory")
 
     # 2. Remove from memory
     memory = AgentMemory(experiments_dir / "memory.json")
