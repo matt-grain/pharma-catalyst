@@ -104,8 +104,8 @@ def git_init_if_needed(repo_path: Path) -> None:
         logger.info("Git repository initialized with baseline")
 
 
-def git_get_next_run_number(repo_path: Path) -> int:
-    """Get next run number by checking existing run branches."""
+def git_get_next_run_number(repo_path: Path, experiment: str) -> int:
+    """Get next run number for this experiment by checking existing branches."""
     result = subprocess.run(
         ["git", "branch", "-a"],
         cwd=repo_path,
@@ -114,25 +114,26 @@ def git_get_next_run_number(repo_path: Path) -> int:
     )
     branches = result.stdout.strip().split("\n")
     run_numbers = []
+    prefix = f"run/{experiment}/"
     for branch in branches:
         branch = branch.strip().replace("* ", "").replace("+ ", "")
-        if branch.startswith("run/"):
+        if branch.startswith(prefix):
             try:
-                num = int(branch.split("/")[1])
+                num = int(branch.split("/")[2])
                 run_numbers.append(num)
             except (IndexError, ValueError):
                 pass
     return max(run_numbers, default=0) + 1
 
 
-def git_create_worktree(repo_path: Path, run_number: int) -> tuple[str, Path]:
+def git_create_worktree(repo_path: Path, experiment: str, run_number: int) -> tuple[str, Path]:
     """Create a worktree for this run, isolated from main.
 
     Returns (branch_name, worktree_path).
     """
-    branch_name = f"run/{run_number:03d}"
-    worktrees_dir = repo_path / ".worktrees"
-    worktrees_dir.mkdir(exist_ok=True)
+    branch_name = f"run/{experiment}/{run_number:03d}"
+    worktrees_dir = repo_path / ".worktrees" / experiment
+    worktrees_dir.mkdir(parents=True, exist_ok=True)
     worktree_path = worktrees_dir / f"run_{run_number:03d}"
 
     # Remove stale worktree if exists
@@ -305,9 +306,9 @@ def run(iterations: int = 10) -> None:
     # Initialize git if needed
     git_init_if_needed(project_root)
 
-    # Create isolated worktree for this run
-    run_number = git_get_next_run_number(project_root)
-    branch_name, worktree_path = git_create_worktree(project_root, run_number)
+    # Create isolated worktree for this run (per-experiment numbering)
+    run_number = git_get_next_run_number(project_root, experiment_name)
+    branch_name, worktree_path = git_create_worktree(project_root, experiment_name, run_number)
 
     # Paths for this run (in worktree, experiment-specific)
     experiments_dir = worktree_path / "experiments" / experiment_name
@@ -320,12 +321,14 @@ def run(iterations: int = 10) -> None:
 
     logger.info("=" * 60)
     logger.info("PHARMA-AGENTS: Autonomous Molecular ML Optimization")
+    logger.info(f"Experiment: {experiment_name}")
     logger.info(f"Run #{run_number} on branch: {branch_name}")
     logger.info("=" * 60)
 
     # Print header to stdout (will also be captured to log)
     print(f"\n{'=' * 60}")
-    print(f"PHARMA-AGENTS Run #{run_number} on branch: {branch_name}")
+    print(f"PHARMA-AGENTS: {experiment_name}")
+    print(f"Run #{run_number} on branch: {branch_name}")
     print(f"Log file: {log_file}")
     print(f"Worktree: {worktree_path}")
     print(f"{'=' * 60}\n")
