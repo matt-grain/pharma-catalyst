@@ -204,6 +204,46 @@ def git_revert_changes(repo_path: Path) -> bool:
         return False
 
 
+def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
+    """Extract hypothesis and reasoning from log file.
+
+    Looks for PROPOSAL: and REASONING: lines from hypothesis_agent output.
+    Returns (hypothesis, reasoning) tuple with defaults if not found.
+    """
+    hypothesis = "See log for details"
+    reasoning = "See log for details"
+
+    try:
+        content = log_file.read_text(encoding="utf-8")
+        # Look for the last PROPOSAL/REASONING pair (most recent iteration)
+        lines = content.split("\n")
+
+        for i, line in enumerate(lines):
+            if "PROPOSAL:" in line:
+                # Extract everything after PROPOSAL:
+                proposal_start = line.find("PROPOSAL:") + len("PROPOSAL:")
+                hypothesis = line[proposal_start:].strip()
+                # If hypothesis continues on next lines, grab them
+                if not hypothesis and i + 1 < len(lines):
+                    hypothesis = lines[i + 1].strip()
+            elif "REASONING:" in line:
+                reasoning_start = line.find("REASONING:") + len("REASONING:")
+                reasoning = line[reasoning_start:].strip()
+                if not reasoning and i + 1 < len(lines):
+                    reasoning = lines[i + 1].strip()
+
+        # Truncate if too long
+        if len(hypothesis) > 200:
+            hypothesis = hypothesis[:197] + "..."
+        if len(reasoning) > 300:
+            reasoning = reasoning[:297] + "..."
+
+    except Exception as e:
+        logger.debug(f"Could not parse hypothesis from log: {e}")
+
+    return hypothesis, reasoning
+
+
 def run(iterations: int = 10) -> None:
     """
     Run the pharma-agents crew for multiple iterations.
@@ -321,9 +361,8 @@ def run(iterations: int = 10) -> None:
         }
         experiment_history.append(experiment_entry)
 
-        # Memory placeholder - future: parse actual hypothesis from crew output
-        hypothesis = f"Iteration {i + 1} changes"
-        reasoning = "See crew output for details"
+        # Parse hypothesis from log file (hypothesis_agent outputs PROPOSAL/REASONING)
+        hypothesis, reasoning = parse_hypothesis_from_log(log_file)
 
         # Log prominent iteration result
         logger.info("")

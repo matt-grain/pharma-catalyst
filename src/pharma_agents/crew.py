@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from loguru import logger
 import os
 
-from .tools.custom_tools import WriteTrainPyTool, RunTrainPyTool
+from .tools.custom_tools import WriteTrainPyTool, RunTrainPyTool, CodeCheckTool
 
 
 class LoggingLLM(LLM):
@@ -94,7 +94,9 @@ class PharmaAgentsCrew:
             tools=[
                 FileReadTool(file_path=str(self.experiments_dir / "train.py")),
                 WriteTrainPyTool(),
+                CodeCheckTool(),
             ],
+            max_iter=40,  # Allow more iterations for code fix cycles
             verbose=True,
         )
 
