@@ -15,6 +15,7 @@ from loguru import logger
 
 from .crew import PharmaAgentsCrew
 from .tools.evaluate import run_training, log_experiment
+from .memory import AgentMemory
 
 
 class TeeStream:
@@ -199,6 +200,10 @@ def run(iterations: int = 10) -> None:
     experiments_dir = project_root / "experiments"
     experiments_dir.mkdir(exist_ok=True)
 
+    # Load persistent memory
+    memory = AgentMemory(experiments_dir / "memory.json")
+    logger.info(f"Loaded memory: {len(memory.experiments)} past experiments")
+
     # Initialize git if needed
     git_init_if_needed(project_root)
 
@@ -261,7 +266,8 @@ def run(iterations: int = 10) -> None:
             "baseline_rmse": f"{best_rmse:.4f}",
             "experiment_history": json.dumps(experiment_history[-5:], indent=2)
             if experiment_history
-            else "No previous experiments",
+            else "No previous experiments in this run",
+            "agent_memory": memory.format_for_prompt(),
         }
 
         # Run the crew (capture stdout to log file)
@@ -291,12 +297,29 @@ def run(iterations: int = 10) -> None:
         }
         experiment_history.append(experiment_entry)
 
+        # Memory placeholder - future: parse actual hypothesis from crew output
+        hypothesis = f"Iteration {i + 1} changes"
+        reasoning = "See crew output for details"
+
         if eval_result.success and eval_result.rmse is not None:
             if eval_result.rmse < best_rmse:
                 improvement = ((best_rmse - eval_result.rmse) / best_rmse) * 100
                 logger.success(
                     f"IMPROVEMENT: {eval_result.rmse:.4f} ({improvement:.1f}% better)"
                 )
+
+                # Save to memory
+                memory.add_experiment(
+                    run=run_number,
+                    iteration=i + 1,
+                    hypothesis=hypothesis,
+                    reasoning=reasoning,
+                    result="success",
+                    rmse_before=best_rmse,
+                    rmse_after=eval_result.rmse,
+                    insight=f"Achieved {improvement:.1f}% improvement",
+                )
+
                 best_rmse = eval_result.rmse
                 # Commit the improvement
                 git_commit_change(
@@ -305,9 +328,35 @@ def run(iterations: int = 10) -> None:
                 )
             else:
                 logger.warning(f"NO IMPROVEMENT: {eval_result.rmse:.4f} (reverting)")
+
+                # Save failure to memory
+                memory.add_experiment(
+                    run=run_number,
+                    iteration=i + 1,
+                    hypothesis=hypothesis,
+                    reasoning=reasoning,
+                    result="failure",
+                    rmse_before=best_rmse,
+                    rmse_after=eval_result.rmse,
+                    insight=f"No improvement (RMSE {eval_result.rmse:.4f} vs baseline {best_rmse:.4f})",
+                )
+
                 git_revert_changes(project_root)
         else:
             logger.error(f"FAILED: {eval_result.error}")
+
+            # Save error to memory
+            memory.add_experiment(
+                run=run_number,
+                iteration=i + 1,
+                hypothesis=hypothesis,
+                reasoning=reasoning,
+                result="failure",
+                rmse_before=best_rmse,
+                rmse_after=None,
+                insight=f"Training failed: {eval_result.error}",
+            )
+
             git_revert_changes(project_root)
 
     # Summary

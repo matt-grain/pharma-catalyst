@@ -1,0 +1,62 @@
+{
+  "experiments": [
+    {
+      "run": 0,
+      "iteration": 1,
+      "timestamp": "2026-03-13T09:30:00",
+      "hypothesis": "Add physicochemical descriptors (MolLogP, MolWt, NumRotatableBonds, HeavyAtomCount) to Morgan fingerprints",
+      "reasoning": "Morgan fingerprints capture local substructures but miss global properties. Solubility (logS) is primarily determined by lipophilicity (LogP) and molecular size (MolWt) as established in the Delaney ESOL paper. Small dataset makes learning these relationships from sparse bit vectors difficult.",
+      "result": "success",
+      "rmse_before": 1.3175,
+      "rmse_after": 1.0747,
+      "improvement_pct": 18.43,
+      "insight": "MolLogP and MolWt are critical drivers of aqueous solubility. Combining fingerprints (local structure) with descriptors (global properties) significantly improves prediction."
+    },
+    {
+      "run": 1,
+      "iteration": 1,
+      "timestamp": "2026-03-13T11:38:00",
+      "hypothesis": "Switch to HistGradientBoostingRegressor and add aromatic proportion descriptor",
+      "reasoning": "Gradient boosting often outperforms RandomForest on tabular data. Aromatic rings affect solubility through pi-stacking interactions with water.",
+      "result": "success",
+      "rmse_before": 1.3175,
+      "rmse_after": 1.1591,
+      "improvement_pct": 12.02,
+      "insight": "HistGradientBoosting provides improvement. However, starting from baseline (not building on previous descriptors) gave smaller gain than the MolLogP approach."
+    },
+    {
+      "run": 1,
+      "iteration": 2,
+      "timestamp": "2026-03-13T11:42:00",
+      "hypothesis": "Add TPSA (Topological Polar Surface Area) and hydrogen bond donor/acceptor counts",
+      "reasoning": "Polar surface area affects water interaction. H-bond donors/acceptors influence aqueous solubility.",
+      "result": "failure",
+      "rmse_before": 1.1591,
+      "rmse_after": 1.1591,
+      "improvement_pct": 0.0,
+      "insight": "TPSA and H-bond counts did not provide additional predictive value. These features may be redundant with existing MolLogP descriptor or already captured indirectly by Morgan fingerprints."
+    },
+    {
+      "run": 1,
+      "iteration": 3,
+      "timestamp": "2026-03-13T11:45:00",
+      "hypothesis": "Increase n_estimators and remove max_depth limit in RandomForest",
+      "reasoning": "More trees and deeper trees might capture more complex patterns.",
+      "result": "failure",
+      "rmse_before": 1.1591,
+      "rmse_after": 1.2103,
+      "improvement_pct": -4.4,
+      "insight": "Removing max_depth caused overfitting on this small dataset. Regularization (limited depth) is important for ESOL's 1128 molecules."
+    }
+  ],
+  "best_rmse": 1.0747,
+  "key_learnings": [
+    "MolLogP is the most impactful single descriptor for solubility prediction",
+    "Combine fingerprints (local structure) with descriptors (global properties) for best results",
+    "HistGradientBoosting can outperform RandomForest but gains depend on feature engineering",
+    "TPSA and H-bond features are redundant - do not add on top of MolLogP",
+    "Keep max_depth regularization on small datasets to prevent overfitting",
+    "Build incrementally on successful changes rather than starting fresh each time"
+  ],
+  "last_updated": "2026-03-13T11:50:00"
+}

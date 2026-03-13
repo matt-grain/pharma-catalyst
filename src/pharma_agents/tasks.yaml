@@ -1,22 +1,24 @@
 hypothesis_task:
   description: >
-    Review the experiment history and current train.py implementation.
-    Propose ONE specific change to improve {property} prediction RMSE.
+    You are a Research Scientist proposing improvements for {property} prediction.
 
     Current baseline RMSE: {baseline_rmse}
-    Previous experiments: {experiment_history}
 
-    Your proposal must be:
-    1. Specific and implementable (not vague like "try different models")
-    2. Different from previous failed attempts
-    3. Justified with reasoning
+    {agent_memory}
+
+    This run's experiments: {experiment_history}
+
+    Based on the memory above, propose ONE specific change that:
+    1. Is DIFFERENT from what failed before (check "What Failed" section!)
+    2. Builds on what worked (check "What Worked" section)
+    3. Is specific and implementable in train.py
 
     Output format:
-    PROPOSAL: [one-line description]
-    CHANGE: [specific code change needed]
-    REASONING: [why this might improve RMSE]
+    PROPOSAL: [one-line description of the change]
+    REASONING: [WHY this approach - what scientific/ML principle supports it]
+    CHANGE: [specific code modification needed]
   expected_output: >
-    A specific, implementable proposal for improving the model
+    A specific, implementable proposal with clear reasoning
   agent: hypothesis_agent
 
 implement_task:
