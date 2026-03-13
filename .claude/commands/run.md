@@ -1,12 +1,10 @@
+---
+description: Start an autonomous ML optimization run
+---
+
 # Run Experiment
 
 Start an autonomous ML optimization run for a molecular property prediction task.
-
-## Usage
-
-```bash
-/run [experiment] [iterations]
-```
 
 ## Arguments
 
@@ -15,15 +13,9 @@ Start an autonomous ML optimization run for a molecular property prediction task
 
 ## Examples
 
-```bash
-# Run BBBP with 5 iterations
+```
 /run bbbp 5
-
-# Run solubility with 3 iterations
 /run solubility 3
-
-# Quick test with 1 iteration
-/run bbbp 1
 ```
 
 ## What It Does
@@ -34,8 +26,8 @@ Start an autonomous ML optimization run for a molecular property prediction task
 4. Commits improvements, reverts failures
 5. Saves learnings to memory.json
 
-## Command
+$ARGUMENTS
 
 ```bash
-PHARMA_EXPERIMENT={{experiment}} MAX_ITERATIONS={{iterations}} uv run python -m pharma_agents.main
+uv run python -m pharma_agents.main $ARGUMENTS
 ```
