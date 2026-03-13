@@ -356,6 +356,27 @@ Agent text output is for observability, not decisions.
 
 **Key insight:** The agent learned from memory that MolLogP and MolWt are critical (from seeded experiments), then strategically combined HistGradientBoosting with all successful descriptors. Memory-informed decisions outperformed blind exploration.
 
+### Auto-Generated Reports
+
+Each run generates an interactive HTML report with Plotly charts:
+
+![Report Summary](docs/screenshot1.png)
+![Report Charts](docs/screenshot2.png)
+
+**Charts include:**
+- **Score Over Iterations** - Baseline (gray) → improvements (green) / failures (red)
+- **Before vs After** - Clear comparison of starting vs final metric
+- **Success Rate** - Pie chart showing experiment success/failure ratio
+- **Improvement by Iteration** - Bar chart of incremental gains
+
+**Generate reports:**
+```bash
+# Auto-generated after each run in experiments/<exp>/run_XXX/report.html
+
+# Regenerate from memory.json
+uv run python -m pharma_agents.report -e solubility --open
+```
+
 ## Why This Architecture
 
 **The molecule is a prop. The agentic capability is the show.**

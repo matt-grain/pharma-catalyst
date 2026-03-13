@@ -22,4 +22,19 @@ repos:
       - id: check-added-large-files
         stages: [pre-push]
 
-  # pyright disabled - not installed in this project, ruff handles most checks
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run pyright src/
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+      - id: ty
+        name: ty
+        entry: uv run ty check src/
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
