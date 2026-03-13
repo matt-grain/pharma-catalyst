@@ -1,3 +1,0 @@
-{"timestamp": "2026-03-13T11:40:09.594118", "rmse": 1.1591, "baseline_rmse": 1.32, "improvement_pct": 12.189393939393941, "success": true, "error": null, "duration_seconds": 10.863473653793335, "recommendation": "KEEP"}
-{"timestamp": "2026-03-13T11:42:24.511676", "rmse": 0.7071, "baseline_rmse": 1.32, "improvement_pct": 46.431818181818194, "success": true, "error": null, "duration_seconds": 15.33318281173706, "recommendation": "KEEP"}
-{"timestamp": "2026-03-13T11:44:00.808155", "rmse": 0.7184, "baseline_rmse": 1.32, "improvement_pct": 45.57575757575758, "success": true, "error": null, "duration_seconds": 14.911228895187378, "recommendation": "KEEP"}
