@@ -202,7 +202,10 @@ def run(iterations: int = 10) -> None:
 
     # Load persistent memory
     memory = AgentMemory(experiments_dir / "memory.json")
-    logger.info(f"Loaded memory: {len(memory.experiments)} past experiments")
+    total_experiments = sum(len(r.experiments) for r in memory.runs.values())
+    logger.info(
+        f"Loaded memory: {total_experiments} past experiments across {len(memory.runs)} runs"
+    )
 
     # Initialize git if needed
     git_init_if_needed(project_root)
