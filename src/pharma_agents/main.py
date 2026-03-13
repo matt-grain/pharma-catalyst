@@ -39,15 +39,15 @@ class TeeStream:
                 clean_data = self.ANSI_ESCAPE.sub("", data)
                 self.log_file.write(clean_data)
                 self.log_file.flush()
-            except ValueError:
-                pass  # File closed, ignore late writes
+            except (ValueError, OSError):
+                pass  # File closed or invalid, ignore late writes
 
     def flush(self):
         self.original.flush()
         if not self._closed:
             try:
                 self.log_file.flush()
-            except ValueError:
+            except (ValueError, OSError):
                 pass
 
     def close(self):
