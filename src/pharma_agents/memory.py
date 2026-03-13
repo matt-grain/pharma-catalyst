@@ -35,8 +35,30 @@ def get_experiments_dir() -> Path:
     return get_experiments_root() / get_experiment_name()
 
 
+def validate_experiment(experiment: str | None = None) -> None:
+    """Validate that an experiment exists. Raises SystemExit with clear message if not."""
+    exp_name = experiment or get_experiment_name()
+    exp_dir = get_experiments_root() / exp_name
+    baseline_path = exp_dir / "baseline.json"
+
+    if not exp_dir.exists():
+        available = [d.name for d in get_experiments_root().iterdir() if d.is_dir()]
+        raise SystemExit(
+            f"Experiment '{exp_name}' not found.\n"
+            f"Available experiments: {', '.join(available) or 'none'}\n"
+            f"Check spelling or create the experiment folder in experiments/"
+        )
+
+    if not baseline_path.exists():
+        raise SystemExit(
+            f"Experiment '{exp_name}' is missing baseline.json.\n"
+            f"Each experiment needs a baseline.json with: score, metric, direction"
+        )
+
+
 def get_baseline_config() -> dict:
     """Load baseline config from baseline.json."""
+    validate_experiment()
     baseline_path = get_experiments_dir() / "baseline.json"
     return json.loads(baseline_path.read_text())
 
