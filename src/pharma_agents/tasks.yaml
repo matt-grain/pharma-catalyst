@@ -36,17 +36,19 @@ evaluate_task:
   description: >
     Run the modified train.py and evaluate results.
 
+    IMPORTANT: The current baseline RMSE is exactly {baseline_rmse} - use this value for comparison.
+
+    Steps:
     1. Use the run_train_py tool to execute training
-    2. Record the RMSE from the output
-    3. Compare to baseline: {baseline_rmse}
-    4. Recommend: KEEP (if improved) or REVERT (if worse or failed)
+    2. The tool returns "RMSE:X.XXXX" - extract this value
+    3. Compare to baseline {baseline_rmse}: if new RMSE < {baseline_rmse}, it's an improvement
+    4. Recommend: KEEP (if RMSE < {baseline_rmse}) or REVERT (if RMSE >= {baseline_rmse})
 
     Output format:
-    RMSE: [value]
+    RMSE: [value from run_train_py tool]
     BASELINE: {baseline_rmse}
-    IMPROVEMENT: [percentage or "WORSE"]
+    IMPROVEMENT: [percentage if better, or "WORSE"]
     RECOMMENDATION: [KEEP or REVERT]
-    NOTES: [any observations]
   expected_output: >
-    Evaluation report with RMSE, comparison, and recommendation
+    Evaluation with exact RMSE from tool, comparison to {baseline_rmse}, and recommendation
   agent: evaluator_agent
