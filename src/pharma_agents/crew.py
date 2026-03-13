@@ -7,10 +7,12 @@ molecular property prediction models.
 
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import FileReadTool, FileWriterTool
+from crewai_tools import FileReadTool
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+
+from .tools.custom_tools import WriteTrainPyTool, RunTrainPyTool
 
 # Load .env file
 load_dotenv()
@@ -63,7 +65,7 @@ class PharmaAgentsCrew:
             llm=get_llm(),
             tools=[
                 FileReadTool(file_path=str(self.tools_dir / "train.py")),
-                FileWriterTool(),
+                WriteTrainPyTool(),
             ],
             verbose=True,
         )
@@ -71,13 +73,12 @@ class PharmaAgentsCrew:
     @agent
     def evaluator_agent(self) -> Agent:
         """QA Scientist who evaluates results."""
-        # Note: In production, this would use a custom tool to run train.py
-        # For now, we simulate with file reading
         return Agent(
             config=self.agents_config["evaluator_agent"],
             llm=get_llm(),
             tools=[
                 FileReadTool(file_path=str(self.tools_dir / "train.py")),
+                RunTrainPyTool(),
             ],
             verbose=True,
         )

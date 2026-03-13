@@ -24,11 +24,10 @@ implement_task:
     Implement the proposal from the Research Scientist in train.py.
 
     Rules:
-    - Modify ONLY train.py (located at src/pharma_agents/tools/train.py)
+    - Modify ONLY train.py
     - Keep the same function signature: train() -> float (returns RMSE)
     - Ensure code is syntactically correct
-    - Do not modify evaluate.py or any other files
-    - Use the file_write tool to save your changes
+    - Use the write_train_py tool with the COMPLETE file content
   expected_output: >
     Confirmation that train.py has been modified with the proposed change
   agent: model_agent
@@ -37,8 +36,8 @@ evaluate_task:
   description: >
     Run the modified train.py and evaluate results.
 
-    1. Execute train.py
-    2. Record the RMSE
+    1. Use the run_train_py tool to execute training
+    2. Record the RMSE from the output
     3. Compare to baseline: {baseline_rmse}
     4. Recommend: KEEP (if improved) or REVERT (if worse or failed)
 
