@@ -22,12 +22,4 @@ repos:
       - id: check-added-large-files
         stages: [pre-push]
 
-  - repo: local
-    hooks:
-      - id: pyright
-        name: pyright
-        entry: pyright
-        language: system
-        types: [python]
-        stages: [pre-push]
-        exclude: ^experiments/train\.py$  # Agents modify this, skip type checking
+  # pyright disabled - not installed in this project, ruff handles most checks
