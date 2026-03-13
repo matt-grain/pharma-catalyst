@@ -5,6 +5,26 @@ from crewai.tools import BaseTool
 from pharma_agents.memory import get_experiments_dir, get_metric_name
 
 
+class ReadTrainPyTool(BaseTool):
+    """Tool to read the train.py file."""
+
+    name: str = "read_train_py"
+    description: str = (
+        "Reads and returns the current content of train.py. "
+        "No input required. Returns the full Python code."
+    )
+
+    def _run(self, _: str = "") -> str:
+        """Read train.py content."""
+        train_path = get_experiments_dir() / "train.py"
+        try:
+            return train_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return f"Error: train.py not found at {train_path}"
+        except Exception as e:
+            return f"Error reading train.py: {e}"
+
+
 class WriteTrainPyTool(BaseTool):
     """Tool to write the train.py file."""
 

@@ -8,12 +8,11 @@ molecular property prediction models.
 import time
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import FileReadTool
 from dotenv import load_dotenv
 from loguru import logger
 import os
 
-from .tools.custom_tools import WriteTrainPyTool, RunTrainPyTool, CodeCheckTool
+from .tools.custom_tools import ReadTrainPyTool, WriteTrainPyTool, RunTrainPyTool, CodeCheckTool
 
 
 class LoggingLLM(LLM):
@@ -69,11 +68,6 @@ class PharmaAgentsCrew:
     agents_config = "agents.yaml"
     tasks_config = "tasks.yaml"
 
-    def __init__(self):
-        from .memory import get_experiments_dir
-
-        self.experiments_dir = get_experiments_dir()
-
     @agent
     def hypothesis_agent(self) -> Agent:
         """Research Scientist who proposes improvements."""
@@ -81,7 +75,7 @@ class PharmaAgentsCrew:
             config=self.agents_config["hypothesis_agent"],  # type: ignore[index]
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
+                ReadTrainPyTool(),
             ],
             verbose=True,
         )
@@ -93,7 +87,7 @@ class PharmaAgentsCrew:
             config=self.agents_config["model_agent"],  # type: ignore[index]
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
+                ReadTrainPyTool(),
                 WriteTrainPyTool(),
                 CodeCheckTool(),
             ],
@@ -108,7 +102,7 @@ class PharmaAgentsCrew:
             config=self.agents_config["evaluator_agent"],
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
+                ReadTrainPyTool(),
                 RunTrainPyTool(),
             ],
             verbose=True,
