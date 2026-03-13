@@ -107,8 +107,8 @@ class Experiment:
 
     # The result
     result: str  # "success" or "failure"
-    rmse_before: float
-    rmse_after: Optional[float]
+    score_before: float
+    score_after: Optional[float]
     improvement_pct: Optional[float]
 
     # The learning
@@ -122,7 +122,7 @@ class RunMemory:
     run_id: int
     start_time: str
     experiments: list[Experiment] = field(default_factory=list)
-    best_rmse: float = field(default_factory=get_baseline_score)
+    best_score: float = field(default_factory=get_baseline_score)
     consecutive_failures: int = 0
     # Run conclusion - set when run ends
     # LOCAL_OPTIMUM: diminishing returns, need radical change
@@ -138,7 +138,7 @@ class AgentMemory:
     def __init__(self, memory_path: Path):
         self.memory_path = memory_path
         self.runs: dict[int, RunMemory] = {}
-        self.global_best_rmse: float = get_baseline_score()
+        self.global_best_score: float = get_baseline_score()
         self.key_learnings: list[str] = []
         self._load()
 
@@ -158,13 +158,13 @@ class AgentMemory:
                     run_id=run_id,
                     start_time=run_data.get("start_time", ""),
                     experiments=experiments,
-                    best_rmse=run_data.get("best_rmse", baseline),
+                    best_score=run_data.get("best_score", baseline),
                     consecutive_failures=run_data.get("consecutive_failures", 0),
                     conclusion=run_data.get("conclusion", ""),
                     conclusion_detail=run_data.get("conclusion_detail", ""),
                 )
 
-            self.global_best_rmse = data.get("global_best_rmse", baseline)
+            self.global_best_score = data.get("global_best_score", baseline)
             self.key_learnings = data.get("key_learnings", [])
 
     def save(self) -> None:
@@ -176,14 +176,14 @@ class AgentMemory:
                     "run_id": run.run_id,
                     "start_time": run.start_time,
                     "experiments": [asdict(exp) for exp in run.experiments],
-                    "best_rmse": run.best_rmse,
+                    "best_score": run.best_score,
                     "consecutive_failures": run.consecutive_failures,
                     "conclusion": run.conclusion,
                     "conclusion_detail": run.conclusion_detail,
                 }
                 for run_id, run in self.runs.items()
             },
-            "global_best_rmse": self.global_best_rmse,
+            "global_best_score": self.global_best_score,
             "key_learnings": self.key_learnings,
             "last_updated": datetime.now().isoformat(),
         }
@@ -205,8 +205,8 @@ class AgentMemory:
         hypothesis: str,
         reasoning: str,
         result: str,
-        rmse_before: float,
-        rmse_after: Optional[float],
+        score_before: float,
+        score_after: Optional[float],
         insight: str,
     ) -> None:
         """Record an experiment."""
@@ -218,8 +218,8 @@ class AgentMemory:
 
         # Calculate improvement (direction-aware)
         improvement = None
-        if rmse_after and rmse_before:
-            improvement = compute_improvement_pct(rmse_before, rmse_after)
+        if score_after and score_before:
+            improvement = compute_improvement_pct(score_before, score_after)
 
         exp = Experiment(
             iteration=iteration,
@@ -227,8 +227,8 @@ class AgentMemory:
             hypothesis=hypothesis,
             reasoning=reasoning,
             result=result,
-            rmse_before=rmse_before,
-            rmse_after=rmse_after,
+            score_before=score_before,
+            score_after=score_after,
             improvement_pct=improvement,
             insight=insight,
         )
@@ -237,10 +237,10 @@ class AgentMemory:
         # Track consecutive failures
         if result == "success":
             run_memory.consecutive_failures = 0
-            if rmse_after and is_better(rmse_after, run_memory.best_rmse):
-                run_memory.best_rmse = rmse_after
-            if rmse_after and is_better(rmse_after, self.global_best_rmse):
-                self.global_best_rmse = rmse_after
+            if score_after and is_better(score_after, run_memory.best_score):
+                run_memory.best_score = score_after
+            if score_after and is_better(score_after, self.global_best_score):
+                self.global_best_score = score_after
         else:
             run_memory.consecutive_failures += 1
 
@@ -292,13 +292,13 @@ class AgentMemory:
             run.conclusion = "LOCAL_OPTIMUM"
             run.conclusion_detail = (
                 f"Ended with {run.consecutive_failures} consecutive failures after "
-                f"reaching {metric} {run.best_rmse:.4f}. Likely hit diminishing returns. "
+                f"reaching {metric} {run.best_score:.4f}. Likely hit diminishing returns. "
                 "Future runs should explore radically different directions."
             )
         elif recent_improvements and max(recent_improvements) < 1.0:
             run.conclusion = "LOCAL_OPTIMUM"
             run.conclusion_detail = (
-                f"Recent improvements < 1%. Reached {metric} {run.best_rmse:.4f}. "
+                f"Recent improvements < 1%. Reached {metric} {run.best_score:.4f}. "
                 "Incremental changes exhausted. Try different model families or features."
             )
         elif len(successes) > 0:
@@ -308,7 +308,7 @@ class AgentMemory:
             run.conclusion = "PROGRESS_CONTINUING"
             run.conclusion_detail = (
                 f"Still making progress (avg {avg_improvement:.1f}% per success). "
-                f"Reached {metric} {run.best_rmse:.4f}. More iterations could yield improvements."
+                f"Reached {metric} {run.best_score:.4f}. More iterations could yield improvements."
             )
         else:
             run.conclusion = "INCONCLUSIVE"
@@ -349,11 +349,11 @@ class AgentMemory:
 
         # Check if any improved the global best
         for exp in recent:
-            if exp.result == "success" and exp.rmse_after:
+            if exp.result == "success" and exp.score_after:
                 # Check if this experiment matched or beat global best
                 if (
-                    is_better(exp.rmse_after, self.global_best_rmse)
-                    or exp.rmse_after == self.global_best_rmse
+                    is_better(exp.score_after, self.global_best_score)
+                    or exp.score_after == self.global_best_score
                 ):
                     return False  # Recent improvement exists
 
@@ -367,7 +367,7 @@ class AgentMemory:
 
         metric = get_metric_name()
         lines = [
-            f"## Agent Memory (Global Best {metric}: {self.global_best_rmse:.4f})",
+            f"## Agent Memory (Global Best {metric}: {self.global_best_score:.4f})",
             "",
         ]
 

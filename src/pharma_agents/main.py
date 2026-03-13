@@ -352,13 +352,13 @@ def run(iterations: int = 10) -> None:
 
     # After success check, rmse is guaranteed to be set
     assert baseline_result.rmse is not None
-    baseline_rmse: float = baseline_result.rmse
-    best_rmse: float = baseline_rmse
-    logger.info(f"Baseline {metric}: {baseline_rmse:.4f}")
+    baseline_score: float = baseline_result.rmse
+    best_score: float = baseline_score
+    logger.info(f"Baseline {metric}: {baseline_score:.4f}")
 
     # Commit baseline state on this branch
     git_commit_change(
-        worktree_path, f"[Run {run_number}] Baseline: {metric} {baseline_rmse:.4f}"
+        worktree_path, f"[Run {run_number}] Baseline: {metric} {baseline_score:.4f}"
     )
 
     # Initialize crew
@@ -373,7 +373,7 @@ def run(iterations: int = 10) -> None:
         logger.info("=" * 60)
         logger.info(f"ITERATION {i + 1}/{iterations}")
         logger.info("=" * 60)
-        logger.info(f"Current best {metric}: {best_rmse:.4f}")
+        logger.info(f"Current best {metric}: {best_score:.4f}")
 
         # Prepare inputs for the crew
         from .memory import get_metric_direction, get_baseline_config
@@ -383,7 +383,7 @@ def run(iterations: int = 10) -> None:
             "property": config.get("property", "molecular property"),
             "metric": metric,
             "direction": get_metric_direction(),
-            "baseline_rmse": f"{best_rmse:.4f}",
+            "baseline_score": f"{best_score:.4f}",
             "experiment_history": json.dumps(experiment_history[-5:], indent=2)
             if experiment_history
             else "No previous experiments in this run",
@@ -427,9 +427,9 @@ def run(iterations: int = 10) -> None:
         logger.info("-" * 60)
 
         if eval_result.success and eval_result.rmse is not None:
-            if is_better(eval_result.rmse, best_rmse):
-                improvement = compute_improvement_pct(best_rmse, eval_result.rmse)
-                logger.success(f"{metric}: {best_rmse:.4f} -> {eval_result.rmse:.4f}")
+            if is_better(eval_result.rmse, best_score):
+                improvement = compute_improvement_pct(best_score, eval_result.rmse)
+                logger.success(f"{metric}: {best_score:.4f} -> {eval_result.rmse:.4f}")
                 logger.success(f"IMPROVEMENT: {improvement:.1f}% better - KEEPING")
 
                 # Save to memory
@@ -439,19 +439,19 @@ def run(iterations: int = 10) -> None:
                     hypothesis=hypothesis,
                     reasoning=reasoning,
                     result="success",
-                    rmse_before=best_rmse,
-                    rmse_after=eval_result.rmse,
+                    score_before=best_score,
+                    score_after=eval_result.rmse,
                     insight=f"Achieved {improvement:.1f}% improvement",
                 )
 
-                best_rmse = eval_result.rmse
+                best_score = eval_result.rmse
                 # Commit the improvement
                 git_commit_change(
                     worktree_path,
                     f"[Run {run_number}] Iter {i + 1}: {metric} {eval_result.rmse:.4f} ({improvement:.1f}% better)",
                 )
             else:
-                logger.warning(f"{metric}: {best_rmse:.4f} -> {eval_result.rmse:.4f}")
+                logger.warning(f"{metric}: {best_score:.4f} -> {eval_result.rmse:.4f}")
                 logger.warning("NO IMPROVEMENT - REVERTING")
 
                 # Save failure to memory
@@ -461,9 +461,9 @@ def run(iterations: int = 10) -> None:
                     hypothesis=hypothesis,
                     reasoning=reasoning,
                     result="failure",
-                    rmse_before=best_rmse,
-                    rmse_after=eval_result.rmse,
-                    insight=f"No improvement ({metric} {eval_result.rmse:.4f} vs baseline {best_rmse:.4f})",
+                    score_before=best_score,
+                    score_after=eval_result.rmse,
+                    insight=f"No improvement ({metric} {eval_result.rmse:.4f} vs baseline {best_score:.4f})",
                 )
 
                 git_revert_changes(worktree_path)
@@ -478,8 +478,8 @@ def run(iterations: int = 10) -> None:
                 hypothesis=hypothesis,
                 reasoning=reasoning,
                 result="failure",
-                rmse_before=best_rmse,
-                rmse_after=None,
+                score_before=best_score,
+                score_after=None,
                 insight=f"Training failed: {eval_result.error}",
             )
 
@@ -494,9 +494,9 @@ def run(iterations: int = 10) -> None:
     logger.info("=" * 60)
     logger.info("SUMMARY")
     logger.info("=" * 60)
-    logger.info(f"Initial {metric}:  {baseline_rmse:.4f}")
-    logger.info(f"Final {metric}:    {best_rmse:.4f}")
-    total_improvement = compute_improvement_pct(baseline_rmse, best_rmse)
+    logger.info(f"Initial {metric}:  {baseline_score:.4f}")
+    logger.info(f"Final {metric}:    {best_score:.4f}")
+    total_improvement = compute_improvement_pct(baseline_score, best_score)
     logger.success(f"Total Improvement: {total_improvement:.1f}%")
     logger.info(f"Experiments:   {len(experiment_history)}")
     logger.info(f"Log dir:       {run_log_dir}")
@@ -505,8 +505,8 @@ def run(iterations: int = 10) -> None:
     print(f"\n{'=' * 60}")
     print("SUMMARY")
     print(f"{'=' * 60}")
-    print(f"Initial {metric}:      {baseline_rmse:.4f}")
-    print(f"Final {metric}:        {best_rmse:.4f}")
+    print(f"Initial {metric}:      {baseline_score:.4f}")
+    print(f"Final {metric}:        {best_score:.4f}")
     print(f"Total Improvement: {total_improvement:.1f}%")
     print(f"Experiments:       {len(experiment_history)}")
     print(f"Log file:          {log_file}")
