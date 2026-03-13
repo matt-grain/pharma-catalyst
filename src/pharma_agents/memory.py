@@ -41,18 +41,18 @@ def validate_experiment(experiment: str | None = None) -> None:
     exp_dir = get_experiments_root() / exp_name
     baseline_path = exp_dir / "baseline.json"
 
-    if not exp_dir.exists():
-        available = [d.name for d in get_experiments_root().iterdir() if d.is_dir()]
+    # Valid experiment = has baseline.json (folder alone isn't enough)
+    if not baseline_path.exists():
+        # Find valid experiments (those with baseline.json)
+        available = [
+            d.name
+            for d in get_experiments_root().iterdir()
+            if d.is_dir() and (d / "baseline.json").exists()
+        ]
         raise SystemExit(
             f"Experiment '{exp_name}' not found.\n"
             f"Available experiments: {', '.join(available) or 'none'}\n"
-            f"Check spelling or create the experiment folder in experiments/"
-        )
-
-    if not baseline_path.exists():
-        raise SystemExit(
-            f"Experiment '{exp_name}' is missing baseline.json.\n"
-            f"Each experiment needs a baseline.json with: score, metric, direction"
+            f"Check spelling or create experiments/{exp_name}/baseline.json"
         )
 
 
