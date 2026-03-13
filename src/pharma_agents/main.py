@@ -5,6 +5,7 @@ Runs the agent crew for N iterations, tracking improvements.
 """
 
 import json
+import re
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -21,13 +22,18 @@ from .memory import AgentMemory
 class TeeStream:
     """Stream that writes to both stdout and a log file."""
 
+    # Regex to strip ANSI escape codes
+    ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
     def __init__(self, original_stream, log_file: Path):
         self.original = original_stream
         self.log_file = open(log_file, "a", encoding="utf-8")
 
     def write(self, data):
         self.original.write(data)
-        self.log_file.write(data)
+        # Strip ANSI codes for log file (cleaner logs)
+        clean_data = self.ANSI_ESCAPE.sub("", data)
+        self.log_file.write(clean_data)
         self.log_file.flush()
 
     def flush(self):
@@ -306,12 +312,17 @@ def run(iterations: int = 10) -> None:
         hypothesis = f"Iteration {i + 1} changes"
         reasoning = "See crew output for details"
 
+        # Log prominent iteration result
+        logger.info("")
+        logger.info("-" * 60)
+        logger.info(f"ITERATION {i + 1} RESULT")
+        logger.info("-" * 60)
+
         if eval_result.success and eval_result.rmse is not None:
             if eval_result.rmse < best_rmse:
                 improvement = ((best_rmse - eval_result.rmse) / best_rmse) * 100
-                logger.success(
-                    f"IMPROVEMENT: {eval_result.rmse:.4f} ({improvement:.1f}% better)"
-                )
+                logger.success(f"RMSE: {best_rmse:.4f} -> {eval_result.rmse:.4f}")
+                logger.success(f"IMPROVEMENT: {improvement:.1f}% better - KEEPING")
 
                 # Save to memory
                 memory.add_experiment(
@@ -332,7 +343,8 @@ def run(iterations: int = 10) -> None:
                     f"[Run {run_number}] Iter {i + 1}: RMSE {eval_result.rmse:.4f} ({improvement:.1f}% better)",
                 )
             else:
-                logger.warning(f"NO IMPROVEMENT: {eval_result.rmse:.4f} (reverting)")
+                logger.warning(f"RMSE: {best_rmse:.4f} -> {eval_result.rmse:.4f}")
+                logger.warning("NO IMPROVEMENT - REVERTING")
 
                 # Save failure to memory
                 memory.add_experiment(
@@ -348,7 +360,8 @@ def run(iterations: int = 10) -> None:
 
                 git_revert_changes(project_root)
         else:
-            logger.error(f"FAILED: {eval_result.error}")
+            logger.error(f"TRAINING FAILED: {eval_result.error}")
+            logger.error("REVERTING")
 
             # Save error to memory
             memory.add_experiment(

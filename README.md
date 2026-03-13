@@ -1,8 +1,14 @@
-# pharma-agents
+# pharma-catalyst
 
-**Autonomous multi-agent system for molecular property prediction.**
+**Self-improving AI agents for molecular property prediction.**
 
-Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) - but for drug discovery ML.
+Built with CrewAI, featuring persistent cross-run memory, automatic stuck detection, and exploration mode to escape local optima. Demonstrated on ESOL solubility prediction: **1.32 → 0.65 RMSE (50.4% improvement)** in 6 autonomous iterations.
+
+Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) — applied to drug discovery ML.
+
+![Python](https://img.shields.io/badge/python-3.12+-blue)
+![CrewAI](https://img.shields.io/badge/CrewAI-multi--agent-purple)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## The Idea
 
@@ -154,7 +160,7 @@ Future runs will start from this new baseline.
 ## Project Structure
 
 ```
-pharma-agents/
+pharma-catalyst/
 ├── src/pharma_agents/           # Library code (generic, reusable)
 │   ├── crew.py                  # CrewAI crew definition
 │   ├── memory.py                # Persistent agent memory
@@ -207,7 +213,9 @@ Agents learn across runs via persistent memory (`experiments/memory.json`).
         }
       ],
       "best_rmse": 0.6532,
-      "consecutive_failures": 0
+      "consecutive_failures": 0,
+      "conclusion": "LOCAL_OPTIMUM",
+      "conclusion_detail": "HistGradientBoosting + descriptors maximized. Try different architectures."
     }
   },
   "global_best_rmse": 0.6532,
@@ -227,6 +235,24 @@ The Hypothesis Agent sees this context and can:
 - Build on successful approaches
 - Avoid repeating failures
 - Combine winning strategies
+
+### Run Conclusions & Notes for Future Researchers
+
+Each run ends with a conclusion that guides future agents:
+
+| Conclusion | Meaning | Guidance |
+|------------|---------|----------|
+| `LOCAL_OPTIMUM` | Reached diminishing returns | Try different architectures, GNN features, ensembles |
+| `PROGRESS_CONTINUING` | Still improving when stopped | Continue same direction, more iterations |
+| `STUCK` | Multiple consecutive failures | Exploration mode required |
+
+Future runs see **"Notes from Previous Researchers"**:
+```
+### Notes from Previous Researchers
+- **Run 0** [PROGRESS_CONTINUING]: 18.4% improvement with descriptors. More iterations could help.
+- **Run 1** [LOCAL_OPTIMUM]: 50.4% improvement. HistGradientBoosting + descriptors maximized.
+  Future runs should try: different model architectures, GNN-based features, or ensembles.
+```
 
 ### Stuck Detection & Exploration Mode
 
