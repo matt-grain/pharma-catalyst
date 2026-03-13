@@ -6,6 +6,8 @@ Runs the agent crew for N iterations, tracking improvements.
 
 import json
 import subprocess
+import sys
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
 
@@ -15,12 +17,49 @@ from .crew import PharmaAgentsCrew
 from .tools.evaluate import run_training, log_experiment
 
 
+class TeeStream:
+    """Stream that writes to both stdout and a log file."""
+
+    def __init__(self, original_stream, log_file: Path):
+        self.original = original_stream
+        self.log_file = open(log_file, "a", encoding="utf-8")
+
+    def write(self, data):
+        self.original.write(data)
+        self.log_file.write(data)
+        self.log_file.flush()
+
+    def flush(self):
+        self.original.flush()
+        self.log_file.flush()
+
+    def close(self):
+        self.log_file.close()
+
+
+@contextmanager
+def capture_stdout_to_log(log_file: Path):
+    """Context manager to tee stdout to log file."""
+    tee = TeeStream(sys.stdout, log_file)
+    old_stdout = sys.stdout
+    sys.stdout = tee
+    try:
+        yield
+    finally:
+        sys.stdout = old_stdout
+        tee.close()
+
+
 # Configure loguru
-def setup_logging(log_dir: Path) -> None:
-    """Configure loguru for file and console output."""
+def setup_logging(log_dir: Path) -> Path:
+    """Configure loguru for file output only (no stdout)."""
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
+    # Remove default stderr handler
+    logger.remove()
+
+    # Add file handler only
     logger.add(
         log_file,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
@@ -28,6 +67,7 @@ def setup_logging(log_dir: Path) -> None:
         rotation="10 MB",
     )
     logger.info(f"Logging to {log_file}")
+    return log_file
 
 
 # Git integration
@@ -169,12 +209,18 @@ def run(iterations: int = 10) -> None:
     # Setup logging for this run
     run_log_dir = experiments_dir / f"run_{run_number:03d}"
     run_log_dir.mkdir(exist_ok=True)
-    setup_logging(run_log_dir)
+    log_file = setup_logging(run_log_dir)
 
     logger.info("=" * 60)
     logger.info("PHARMA-AGENTS: Autonomous Molecular ML Optimization")
     logger.info(f"Run #{run_number} on branch: {branch_name}")
     logger.info("=" * 60)
+
+    # Print header to stdout (will also be captured to log)
+    print(f"\n{'=' * 60}")
+    print(f"PHARMA-AGENTS Run #{run_number} on branch: {branch_name}")
+    print(f"Log file: {log_file}")
+    print(f"{'=' * 60}\n")
 
     # Reset train.py to baseline
     git_reset_train_to_baseline(project_root)
@@ -218,10 +264,11 @@ def run(iterations: int = 10) -> None:
             else "No previous experiments",
         }
 
-        # Run the crew
+        # Run the crew (capture stdout to log file)
         try:
             logger.info("Running agent crew...")
-            result = crew.crew().kickoff(inputs=inputs)
+            with capture_stdout_to_log(log_file):
+                result = crew.crew().kickoff(inputs=inputs)
             logger.info("Crew completed")
             logger.debug(f"Crew output: {result}")
         except Exception as e:
@@ -274,6 +321,16 @@ def run(iterations: int = 10) -> None:
     logger.success(f"Total Improvement: {total_improvement:.1f}%")
     logger.info(f"Experiments:   {len(experiment_history)}")
     logger.info(f"Log dir:       {experiments_dir}")
+
+    # Print summary to stdout
+    print(f"\n{'=' * 60}")
+    print("SUMMARY")
+    print(f"{'=' * 60}")
+    print(f"Initial RMSE:      {baseline_rmse:.4f}")
+    print(f"Final RMSE:        {best_rmse:.4f}")
+    print(f"Total Improvement: {total_improvement:.1f}%")
+    print(f"Experiments:       {len(experiment_history)}")
+    print(f"Log file:          {log_file}")
 
     # Show git log
     logger.info("")
