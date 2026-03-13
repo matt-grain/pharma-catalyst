@@ -289,7 +289,7 @@ def run(iterations: int = 10) -> None:
     """
     from .memory import get_experiment_name
 
-    project_root = Path(__file__).parent.parent.parent
+    project_root = Path(__file__).parent.parent.parent.resolve()
     experiment_name = get_experiment_name()
     main_experiments_root = project_root / "experiments"
     main_experiments_dir = main_experiments_root / experiment_name
@@ -338,7 +338,8 @@ def run(iterations: int = 10) -> None:
     print(f"{'=' * 60}\n")
 
     # Set experiments dir for tools/crew (they use get_experiments_dir())
-    os.environ["PHARMA_EXPERIMENTS_DIR"] = str(experiments_dir)
+    # Resolve to absolute path to avoid FileReadTool issues
+    os.environ["PHARMA_EXPERIMENTS_DIR"] = str(experiments_dir.resolve())
 
     # Reset train.py to baseline (in worktree)
     git_reset_train_to_baseline(worktree_path)
@@ -534,7 +535,7 @@ def promote(run_number: int) -> None:
 
     This merges run/XXX into main and updates baseline_train.py + baseline.json.
     """
-    project_root = Path(__file__).parent.parent.parent
+    project_root = Path(__file__).parent.parent.parent.resolve()
     branch_name = f"run/{run_number:03d}"
 
     logger.info(f"Promoting {branch_name} to main...")
