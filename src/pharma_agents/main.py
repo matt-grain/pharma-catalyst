@@ -475,7 +475,7 @@ def run(iterations: int = 10) -> None:
     total_improvement = ((baseline_rmse - best_rmse) / baseline_rmse) * 100
     logger.success(f"Total Improvement: {total_improvement:.1f}%")
     logger.info(f"Experiments:   {len(experiment_history)}")
-    logger.info(f"Log dir:       {experiments_dir}")
+    logger.info(f"Log dir:       {run_log_dir}")
 
     # Print summary to stdout
     print(f"\n{'=' * 60}")
@@ -487,12 +487,12 @@ def run(iterations: int = 10) -> None:
     print(f"Experiments:       {len(experiment_history)}")
     print(f"Log file:          {log_file}")
 
-    # Show git log
+    # Show git log (from worktree to see run-specific commits)
     logger.info("")
     logger.info(f"Git history ({branch_name}):")
     result = subprocess.run(
         ["git", "log", "--oneline", "-10"],
-        cwd=project_root,
+        cwd=worktree_path,
         capture_output=True,
         text=True,
     )
