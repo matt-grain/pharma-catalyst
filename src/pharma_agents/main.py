@@ -272,7 +272,7 @@ def run(iterations: int = 10) -> None:
             "experiment_history": json.dumps(experiment_history[-5:], indent=2)
             if experiment_history
             else "No previous experiments in this run",
-            "agent_memory": memory.format_for_prompt(),
+            "agent_memory": memory.format_for_prompt(run_number),
         }
 
         # Run the crew (capture stdout to log file)
