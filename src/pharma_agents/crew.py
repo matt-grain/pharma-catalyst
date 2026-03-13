@@ -45,11 +45,12 @@ class LoggingLLM(LLM):
 load_dotenv()
 
 
-# Configure Gemini as the LLM
+# Configure LLM from environment
 def get_llm() -> LLM:
-    """Get configured LLM (Gemini by default)."""
+    """Get configured LLM from environment variables."""
+    model = os.getenv("LLM_MODEL", "gemini/gemini-3-flash-preview")
     return LoggingLLM(
-        model="gemini/gemini-3-flash-preview",
+        model=model,
         api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0.7,
     )
