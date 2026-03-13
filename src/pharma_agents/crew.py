@@ -71,7 +71,8 @@ class PharmaAgentsCrew:
     tasks_config = "tasks.yaml"
 
     def __init__(self):
-        self.experiments_dir = Path(__file__).parent.parent.parent / "experiments"
+        from .memory import get_experiments_dir
+        self.experiments_dir = get_experiments_dir()
 
     @agent
     def hypothesis_agent(self) -> Agent:

@@ -1,12 +1,12 @@
 """
-BASELINE Training pipeline for ESOL solubility prediction.
+BASELINE Training pipeline for BBBP (Blood-Brain Barrier Penetration) prediction.
 
 THIS FILE IS THE REFERENCE BASELINE - NEVER MODIFIED.
 Copy this to train.py to reset to baseline state.
 
 The train() function must:
-- Return RMSE (float) on the validation set
-- Use data from ../data/esol.csv
+- Return ROC-AUC (float) on the validation set
+- Use data from ../src/pharma_agents/data/bbbp.csv
 - Complete in under 60 seconds
 """
 
@@ -14,9 +14,9 @@ import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import roc_auc_score
 from rdkit import Chem
 from rdkit.Chem import rdFingerprintGenerator
 
@@ -34,23 +34,28 @@ def smiles_to_fingerprint(
 
 
 def load_data() -> tuple[np.ndarray, np.ndarray]:
-    """Load ESOL dataset and convert to features/targets."""
+    """Load BBBP dataset and convert to features/targets."""
     # Data is in src/pharma_agents/data/ (shared across experiments)
+    # Path: experiments/bbbp/ -> project_root/src/pharma_agents/data/
     data_path = (
-        Path(__file__).parent.parent / "src" / "pharma_agents" / "data" / "esol.csv"
+        Path(__file__).parent.parent.parent / "src" / "pharma_agents" / "data" / "bbbp.csv"
     )
     df = pd.read_csv(data_path)
 
+    # Filter out invalid SMILES
+    valid_mask = df["smiles"].apply(lambda s: Chem.MolFromSmiles(s) is not None)
+    df = df[valid_mask]
+
     # Convert SMILES to fingerprints
     X = np.array([smiles_to_fingerprint(smi) for smi in df["smiles"]])
-    y: np.ndarray = df["measured log solubility in mols per litre"].values  # type: ignore[assignment]
+    y: np.ndarray = df["p_np"].values  # Binary: 1 = penetrates BBB, 0 = does not
 
     return X, y
 
 
 def train(verbose: bool = True) -> float:
     """
-    Train model and return validation RMSE.
+    Train model and return validation ROC-AUC.
 
     This is the function the agents optimize.
     """
@@ -64,23 +69,22 @@ def train(verbose: bool = True) -> float:
     load_time = time.perf_counter() - t0
     if verbose:
         print(f"      Loaded {len(y)} molecules in {load_time:.2f}s")
+        print(f"      Class distribution: {sum(y)} positive, {len(y) - sum(y)} negative")
 
     # Split
     if verbose:
         print("[2/4] Splitting train/val...")
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
     if verbose:
         print(f"      Train: {len(y_train)}, Val: {len(y_val)}")
 
-    # Model - BASELINE: simple RandomForest
+    # Model - BASELINE: simple LogisticRegression
     if verbose:
-        print("[3/4] Training RandomForest (n_estimators=100, max_depth=10)...")
+        print("[3/4] Training LogisticRegression...")
     t0 = time.perf_counter()
-    model = RandomForestRegressor(
-        n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
-    )
+    model = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
     train_time = time.perf_counter() - t0
     if verbose:
@@ -90,8 +94,8 @@ def train(verbose: bool = True) -> float:
     if verbose:
         print("[4/4] Evaluating...")
     t0 = time.perf_counter()
-    y_pred = model.predict(X_val)
-    rmse = np.sqrt(mean_squared_error(y_val, y_pred))
+    y_prob = model.predict_proba(X_val)[:, 1]
+    roc_auc = roc_auc_score(y_val, y_prob)
     eval_time = time.perf_counter() - t0
 
     total_time = time.perf_counter() - total_start
@@ -100,7 +104,7 @@ def train(verbose: bool = True) -> float:
         print(f"\n{'=' * 40}")
         print("RESULTS")
         print(f"{'=' * 40}")
-        print(f"Validation RMSE: {rmse:.4f}")
+        print(f"Validation ROC_AUC: {roc_auc:.4f}")
         print(f"{'=' * 40}")
         print("TIMING")
         print(f"{'=' * 40}")
@@ -109,11 +113,11 @@ def train(verbose: bool = True) -> float:
         print(f"Evaluation:      {eval_time:.2f}s")
         print(f"Total:           {total_time:.2f}s")
 
-    return rmse
+    return roc_auc
 
 
-# BASELINE RMSE: 1.3175
+# BASELINE ROC-AUC: ~0.82
 
 if __name__ == "__main__":
-    rmse = train(verbose=True)
-    print(f"\nValidation RMSE: {rmse:.4f}")
+    roc_auc = train(verbose=True)
+    print(f"\nValidation ROC_AUC: {roc_auc:.4f}")

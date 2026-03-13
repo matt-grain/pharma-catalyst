@@ -7,8 +7,8 @@ dist/
 build/
 .pytest_cache/
 
-# Run logs (stay local)
-experiments/run_*/
+# Run logs (stay local, per-experiment)
+experiments/*/run_*/
 
 # Worktrees (isolated run environments)
 .worktrees/

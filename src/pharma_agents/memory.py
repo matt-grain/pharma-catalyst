@@ -13,15 +13,26 @@ from dataclasses import dataclass, asdict, field
 from typing import Optional
 
 
-def get_experiments_dir() -> Path:
-    """Get the experiments directory path.
+def get_experiments_root() -> Path:
+    """Get the root experiments directory."""
+    return Path(__file__).parent.parent.parent / "experiments"
 
-    Can be overridden via PHARMA_EXPERIMENTS_DIR env var (used for worktrees).
+
+def get_experiment_name() -> str:
+    """Get the current experiment name from env var."""
+    return os.environ.get("PHARMA_EXPERIMENT", "bbbp")
+
+
+def get_experiments_dir() -> Path:
+    """Get the experiment-specific directory path.
+
+    Uses PHARMA_EXPERIMENTS_DIR if set (for worktrees), otherwise
+    uses PHARMA_EXPERIMENT to select which experiment folder.
     """
     override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
     if override:
         return Path(override)
-    return Path(__file__).parent.parent.parent / "experiments"
+    return get_experiments_root() / get_experiment_name()
 
 
 def get_baseline_config() -> dict:
@@ -38,6 +49,27 @@ def get_baseline_score() -> float:
 def get_metric_name() -> str:
     """Get the metric name (e.g., RMSE, MAE, accuracy)."""
     return get_baseline_config().get("metric", "RMSE")
+
+
+def get_metric_direction() -> str:
+    """Get whether higher or lower is better for this metric."""
+    return get_baseline_config().get("direction", "lower_is_better")
+
+
+def is_better(new_score: float, old_score: float) -> bool:
+    """Check if new_score is better than old_score based on metric direction."""
+    direction = get_metric_direction()
+    if direction == "higher_is_better":
+        return new_score > old_score
+    return new_score < old_score
+
+
+def compute_improvement_pct(old_score: float, new_score: float) -> float:
+    """Compute improvement percentage (always positive if improved)."""
+    direction = get_metric_direction()
+    if direction == "higher_is_better":
+        return ((new_score - old_score) / old_score) * 100
+    return ((old_score - new_score) / old_score) * 100
 
 
 @dataclass
@@ -162,10 +194,10 @@ class AgentMemory:
 
         run_memory = self.runs[run]
 
-        # Calculate improvement
+        # Calculate improvement (direction-aware)
         improvement = None
         if rmse_after and rmse_before:
-            improvement = ((rmse_before - rmse_after) / rmse_before) * 100
+            improvement = compute_improvement_pct(rmse_before, rmse_after)
 
         exp = Experiment(
             iteration=iteration,
@@ -183,9 +215,9 @@ class AgentMemory:
         # Track consecutive failures
         if result == "success":
             run_memory.consecutive_failures = 0
-            if rmse_after and rmse_after < run_memory.best_rmse:
+            if rmse_after and is_better(rmse_after, run_memory.best_rmse):
                 run_memory.best_rmse = rmse_after
-            if rmse_after and rmse_after < self.global_best_rmse:
+            if rmse_after and is_better(rmse_after, self.global_best_rmse):
                 self.global_best_rmse = rmse_after
         else:
             run_memory.consecutive_failures += 1
@@ -296,7 +328,8 @@ class AgentMemory:
         # Check if any improved the global best
         for exp in recent:
             if exp.result == "success" and exp.rmse_after:
-                if exp.rmse_after <= self.global_best_rmse:
+                # Check if this experiment matched or beat global best
+                if is_better(exp.rmse_after, self.global_best_rmse) or exp.rmse_after == self.global_best_rmse:
                     return False  # Recent improvement exists
 
         return True  # No improvements in last N experiments

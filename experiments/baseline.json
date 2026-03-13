@@ -1,7 +1,0 @@
-{
-  "score": 1.3175,
-  "metric": "RMSE",
-  "direction": "lower_is_better",
-  "description": "RandomForest + Morgan fingerprints (2048 bits, radius 2)",
-  "updated": "2026-03-13"
-}

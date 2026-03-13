@@ -1,0 +1,8 @@
+{
+  "score": 1.3175,
+  "metric": "RMSE",
+  "direction": "lower_is_better",
+  "property": "aqueous solubility (logS)",
+  "description": "RandomForest + Morgan fingerprints (1024 bits, radius 2)",
+  "updated": "2026-03-13"
+}

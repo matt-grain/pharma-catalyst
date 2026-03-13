@@ -1,50 +1,49 @@
 """
-Training pipeline for ESOL solubility prediction.
-Modified to use HistGradientBoostingRegressor and augmented features.
+BASELINE Training pipeline for ESOL solubility prediction.
+
+THIS FILE IS THE REFERENCE BASELINE - NEVER MODIFIED.
+Copy this to train.py to reset to baseline state.
+
+The train() function must:
+- Return RMSE (float) on the validation set
+- Use data from ../data/esol.csv
+- Complete in under 60 seconds
 """
 
 import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from rdkit import Chem
-from rdkit.Chem import rdFingerprintGenerator, Descriptors
+from rdkit.Chem import rdFingerprintGenerator
 
 
-def get_mol_features(smi: str) -> np.ndarray:
-    """Convert SMILES to Morgan fingerprint and physicochemical descriptors."""
-    mol = Chem.MolFromSmiles(smi)
+def smiles_to_fingerprint(
+    smiles: str, radius: int = 2, n_bits: int = 1024
+) -> np.ndarray:
+    """Convert SMILES to Morgan fingerprint."""
+    mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        return np.zeros(1024 + 5)
-    # Morgan Fingerprint
-    gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024)
-    fp = gen.GetFingerprintAsNumPy(mol)
-    # Physicochemical Descriptors
-    # Use pyright ignore because RDKit descriptors are often not recognized by static analysis
-    logp = float(Descriptors.MolLogP(mol))  # type: ignore # pyright: ignore [reportAttributeAccessIssue]
-    mw = float(Descriptors.MolWt(mol))  # type: ignore # pyright: ignore [reportAttributeAccessIssue]
-    rb = float(Descriptors.NumRotatableBonds(mol))  # type: ignore # pyright: ignore [reportAttributeAccessIssue]
-    ha = float(Descriptors.HeavyAtomCount(mol))  # type: ignore # pyright: ignore [reportAttributeAccessIssue]
-    aromatic_ratio = (
-        sum(1 for a in mol.GetAtoms() if a.GetIsAromatic()) / ha if ha > 0 else 0.0
-    )
-    desc_features = np.array([logp, mw, rb, ha, aromatic_ratio])
-    return np.concatenate([fp, desc_features])
+        return np.zeros(n_bits)
+    generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=n_bits)
+    fp = generator.GetFingerprintAsNumPy(mol)
+    return fp
 
 
 def load_data() -> tuple[np.ndarray, np.ndarray]:
     """Load ESOL dataset and convert to features/targets."""
     # Data is in src/pharma_agents/data/ (shared across experiments)
+    # Path: experiments/solubility/ -> project_root/src/pharma_agents/data/
     data_path = (
-        Path(__file__).parent.parent / "src" / "pharma_agents" / "data" / "esol.csv"
+        Path(__file__).parent.parent.parent / "src" / "pharma_agents" / "data" / "esol.csv"
     )
     df = pd.read_csv(data_path)
 
-    # Convert SMILES to features
-    X = np.array([get_mol_features(smi) for smi in df["smiles"]])
+    # Convert SMILES to fingerprints
+    X = np.array([smiles_to_fingerprint(smi) for smi in df["smiles"]])
     y: np.ndarray = df["measured log solubility in mols per litre"].values  # type: ignore[assignment]
 
     return X, y
@@ -53,6 +52,8 @@ def load_data() -> tuple[np.ndarray, np.ndarray]:
 def train(verbose: bool = True) -> float:
     """
     Train model and return validation RMSE.
+
+    This is the function the agents optimize.
     """
     total_start = time.perf_counter()
 
@@ -74,12 +75,12 @@ def train(verbose: bool = True) -> float:
     if verbose:
         print(f"      Train: {len(y_train)}, Val: {len(y_val)}")
 
-    # Model - HistGradientBoostingRegressor
+    # Model - BASELINE: simple RandomForest
     if verbose:
-        print("[3/4] Training HistGradientBoostingRegressor...")
+        print("[3/4] Training RandomForest (n_estimators=100, max_depth=10)...")
     t0 = time.perf_counter()
-    model = HistGradientBoostingRegressor(
-        max_iter=1000, learning_rate=0.05, max_depth=10, random_state=42
+    model = RandomForestRegressor(
+        n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
     )
     model.fit(X_train, y_train)
     train_time = time.perf_counter() - t0
@@ -109,9 +110,11 @@ def train(verbose: bool = True) -> float:
         print(f"Evaluation:      {eval_time:.2f}s")
         print(f"Total:           {total_time:.2f}s")
 
-    return float(rmse)
+    return rmse
 
+
+# BASELINE RMSE: 1.3175
 
 if __name__ == "__main__":
-    rmse_val = train(verbose=True)
-    print(f"\nValidation RMSE: {rmse_val:.4f}")
+    rmse = train(verbose=True)
+    print(f"\nValidation RMSE: {rmse:.4f}")

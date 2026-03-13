@@ -1,0 +1,8 @@
+{
+  "score": 0.8951,
+  "metric": "ROC_AUC",
+  "direction": "higher_is_better",
+  "property": "blood-brain barrier penetration",
+  "description": "LogisticRegression + Morgan fingerprints (1024 bits, radius 2)",
+  "updated": "2026-03-13"
+}

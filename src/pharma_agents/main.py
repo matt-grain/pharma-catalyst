@@ -17,7 +17,7 @@ from loguru import logger
 
 from .crew import PharmaAgentsCrew
 from .tools.evaluate import run_training, log_experiment
-from .memory import AgentMemory, get_metric_name
+from .memory import AgentMemory, get_metric_name, is_better, compute_improvement_pct
 
 
 class TeeStream:
@@ -165,18 +165,23 @@ def git_create_worktree(repo_path: Path, run_number: int) -> tuple[str, Path]:
 def git_reset_train_to_baseline(repo_path: Path) -> None:
     """Reset train.py to baseline state."""
     import shutil
+    from .memory import get_experiment_name
 
-    experiments_dir = repo_path / "experiments"
+    experiment_name = get_experiment_name()
+    experiments_dir = repo_path / "experiments" / experiment_name
     baseline = experiments_dir / "baseline_train.py"
     train = experiments_dir / "train.py"
     shutil.copy(baseline, train)
-    logger.info("Reset train.py to baseline")
+    logger.info(f"Reset train.py to baseline ({experiment_name})")
 
 
 def git_commit_change(repo_path: Path, message: str) -> bool:
     """Commit current changes to train.py."""
+    from .memory import get_experiment_name
+
+    experiment_name = get_experiment_name()
     try:
-        train_py = repo_path / "experiments" / "train.py"
+        train_py = repo_path / "experiments" / experiment_name / "train.py"
         subprocess.run(
             ["git", "add", str(train_py)],
             cwd=repo_path,
@@ -210,8 +215,11 @@ def git_commit_change(repo_path: Path, message: str) -> bool:
 
 def git_revert_changes(repo_path: Path) -> bool:
     """Revert uncommitted changes to train.py."""
+    from .memory import get_experiment_name
+
+    experiment_name = get_experiment_name()
     try:
-        train_py = repo_path / "experiments" / "train.py"
+        train_py = repo_path / "experiments" / experiment_name / "train.py"
         subprocess.run(
             ["git", "checkout", str(train_py)],
             cwd=repo_path,
@@ -276,11 +284,15 @@ def run(iterations: int = 10) -> None:
     4. Commits improvements to the run branch
     5. Main branch stays completely untouched
     """
-    project_root = Path(__file__).parent.parent.parent
-    main_experiments_dir = project_root / "experiments"
-    main_experiments_dir.mkdir(exist_ok=True)
+    from .memory import get_experiment_name
 
-    # Load persistent memory (shared across all runs, stays in main repo)
+    project_root = Path(__file__).parent.parent.parent
+    experiment_name = get_experiment_name()
+    main_experiments_root = project_root / "experiments"
+    main_experiments_dir = main_experiments_root / experiment_name
+    main_experiments_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load persistent memory (per-experiment, stays in main repo)
     memory = AgentMemory(main_experiments_dir / "memory.json")
     total_experiments = sum(len(r.experiments) for r in memory.runs.values())
     logger.info(
@@ -297,9 +309,9 @@ def run(iterations: int = 10) -> None:
     run_number = git_get_next_run_number(project_root)
     branch_name, worktree_path = git_create_worktree(project_root, run_number)
 
-    # Paths for this run (in worktree)
-    experiments_dir = worktree_path / "experiments"
-    experiments_dir.mkdir(exist_ok=True)
+    # Paths for this run (in worktree, experiment-specific)
+    experiments_dir = worktree_path / "experiments" / experiment_name
+    experiments_dir.mkdir(parents=True, exist_ok=True)
 
     # Setup logging for this run (in main repo, not worktree)
     run_log_dir = main_experiments_dir / f"run_{run_number:03d}"
@@ -357,8 +369,12 @@ def run(iterations: int = 10) -> None:
         logger.info(f"Current best {metric}: {best_rmse:.4f}")
 
         # Prepare inputs for the crew
+        from .memory import get_metric_direction, get_baseline_config
+        config = get_baseline_config()
         inputs = {
-            "property": "solubility (logS)",
+            "property": config.get("property", "molecular property"),
+            "metric": metric,
+            "direction": get_metric_direction(),
             "baseline_rmse": f"{best_rmse:.4f}",
             "experiment_history": json.dumps(experiment_history[-5:], indent=2)
             if experiment_history
@@ -403,8 +419,8 @@ def run(iterations: int = 10) -> None:
         logger.info("-" * 60)
 
         if eval_result.success and eval_result.rmse is not None:
-            if eval_result.rmse < best_rmse:
-                improvement = ((best_rmse - eval_result.rmse) / best_rmse) * 100
+            if is_better(eval_result.rmse, best_rmse):
+                improvement = compute_improvement_pct(best_rmse, eval_result.rmse)
                 logger.success(f"{metric}: {best_rmse:.4f} -> {eval_result.rmse:.4f}")
                 logger.success(f"IMPROVEMENT: {improvement:.1f}% better - KEEPING")
 
@@ -472,7 +488,7 @@ def run(iterations: int = 10) -> None:
     logger.info("=" * 60)
     logger.info(f"Initial {metric}:  {baseline_rmse:.4f}")
     logger.info(f"Final {metric}:    {best_rmse:.4f}")
-    total_improvement = ((baseline_rmse - best_rmse) / baseline_rmse) * 100
+    total_improvement = compute_improvement_pct(baseline_rmse, best_rmse)
     logger.success(f"Total Improvement: {total_improvement:.1f}%")
     logger.info(f"Experiments:   {len(experiment_history)}")
     logger.info(f"Log dir:       {run_log_dir}")
@@ -580,8 +596,27 @@ def promote(run_number: int) -> None:
 
 
 if __name__ == "__main__":
+    import argparse
     from dotenv import load_dotenv
 
     load_dotenv()
-    iterations = int(os.environ.get("MAX_ITERATIONS", "5"))
-    run(iterations=iterations)
+
+    parser = argparse.ArgumentParser(description="Run pharma-agents experiment")
+    parser.add_argument(
+        "--experiment", "-e",
+        default=os.environ.get("PHARMA_EXPERIMENT", "bbbp"),
+        help="Experiment to run: 'bbbp' or 'solubility' (default: bbbp)",
+    )
+    parser.add_argument(
+        "--iterations", "-n",
+        type=int,
+        default=int(os.environ.get("MAX_ITERATIONS", "5")),
+        help="Number of iterations (default: 5 or MAX_ITERATIONS env var)",
+    )
+    args = parser.parse_args()
+
+    # Set experiment before importing anything that uses it
+    os.environ["PHARMA_EXPERIMENT"] = args.experiment
+    print(f"Running experiment: {args.experiment}")
+
+    run(iterations=args.iterations)
