@@ -28,19 +28,29 @@ class TeeStream:
     def __init__(self, original_stream, log_file: Path):
         self.original = original_stream
         self.log_file = open(log_file, "a", encoding="utf-8")
+        self._closed = False
 
     def write(self, data):
         self.original.write(data)
-        # Strip ANSI codes for log file (cleaner logs)
-        clean_data = self.ANSI_ESCAPE.sub("", data)
-        self.log_file.write(clean_data)
-        self.log_file.flush()
+        # Write to log file if still open (CrewAI async events may fire late)
+        if not self._closed:
+            try:
+                clean_data = self.ANSI_ESCAPE.sub("", data)
+                self.log_file.write(clean_data)
+                self.log_file.flush()
+            except ValueError:
+                pass  # File closed, ignore late writes
 
     def flush(self):
         self.original.flush()
-        self.log_file.flush()
+        if not self._closed:
+            try:
+                self.log_file.flush()
+            except ValueError:
+                pass
 
     def close(self):
+        self._closed = True
         self.log_file.close()
 
 
