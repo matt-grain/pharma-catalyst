@@ -105,7 +105,7 @@ class PharmaAgentsCrew:
             config=self.agents_config["evaluator_agent"],
             llm=get_llm(),
             tools=[
-                FileReadTool(file_path=str(self.tools_dir / "train.py")),
+                FileReadTool(file_path=str(self.experiments_dir / "train.py")),
                 RunTrainPyTool(),
             ],
             verbose=True,
