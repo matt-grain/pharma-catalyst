@@ -115,7 +115,7 @@ def git_get_next_run_number(repo_path: Path) -> int:
     branches = result.stdout.strip().split("\n")
     run_numbers = []
     for branch in branches:
-        branch = branch.strip().replace("* ", "")
+        branch = branch.strip().replace("* ", "").replace("+ ", "")
         if branch.startswith("run/"):
             try:
                 num = int(branch.split("/")[1])
