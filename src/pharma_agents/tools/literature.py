@@ -15,15 +15,16 @@ from pharma_agents.memory import get_experiment_name, get_experiments_root
 def get_literature_dir() -> Path:
     """Get the literature directory for the current experiment.
 
-    Uses PHARMA_EXPERIMENTS_DIR if set (for tests), otherwise uses
-    the MAIN experiments dir (not worktree) so literature persists.
+    Uses PHARMA_LITERATURE_DIR if set (for tests), otherwise uses
+    the MAIN experiments dir (not worktree) so literature persists
+    across runs.
     """
-    # Test override - use same dir as other experiment files
-    override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
+    # Test override only - NOT PHARMA_EXPERIMENTS_DIR (that's set to worktree)
+    override = os.environ.get("PHARMA_LITERATURE_DIR")
     if override:
-        return Path(override) / "literature"
+        return Path(override)
 
-    # Production - use main experiments dir (not worktree)
+    # Always use main experiments dir (not worktree)
     return get_experiments_root() / get_experiment_name() / "literature"
 
 

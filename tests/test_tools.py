@@ -31,6 +31,7 @@ def experiments_dir(tmp_path_factory):
     # Set environment for tools
     os.environ["PHARMA_EXPERIMENT"] = TEST_EXPERIMENT
     os.environ["PHARMA_EXPERIMENTS_DIR"] = str(exp_dir)
+    os.environ["PHARMA_LITERATURE_DIR"] = str(exp_dir / "literature")
 
     yield exp_dir
 
@@ -39,6 +40,8 @@ def experiments_dir(tmp_path_factory):
         del os.environ["PHARMA_EXPERIMENT"]
     if "PHARMA_EXPERIMENTS_DIR" in os.environ:
         del os.environ["PHARMA_EXPERIMENTS_DIR"]
+    if "PHARMA_LITERATURE_DIR" in os.environ:
+        del os.environ["PHARMA_LITERATURE_DIR"]
 
 
 class TestArxivSearchTool:
