@@ -106,10 +106,15 @@ class LiteratureStoreTool(BaseTool):
 
         # Try JSON first
         paper = None
+        full_content = None
         try:
             paper = json.loads(paper_input)
+            # JSON may include full_content field
+            full_content = paper.get("full_content")
         except json.JSONDecodeError:
             # Not JSON - try to extract from markdown
+            # Save the raw input as full content
+            full_content = paper_input
             paper = self._extract_from_markdown(paper_input)
             if not paper:
                 return (
@@ -155,9 +160,19 @@ class LiteratureStoreTool(BaseTool):
         papers_dir = lit_dir / "papers"
         papers_dir.mkdir(exist_ok=True)
         safe_id = paper_id.replace("/", "_").replace(":", "_")
+
+        # Save full content if available
+        has_full = False
+        if full_content and len(full_content) > 200:
+            (papers_dir / f"{safe_id}_full.md").write_text(full_content)
+            has_full = True
+
+        # Build summary markdown with links
+        full_link = f"**Full Content:** [{safe_id}_full.md]({safe_id}_full.md)\n" if has_full else ""
         (papers_dir / f"{safe_id}.md").write_text(
             f"# {title}\n\n**Paper ID:** {paper_id}\n"
-            f"**PDF:** https://arxiv.org/pdf/{paper_id}.pdf\n\n"
+            f"**PDF:** https://arxiv.org/pdf/{paper_id}.pdf\n"
+            f"{full_link}\n"
             f"## Summary\n\n{summary}\n\n"
             f"## Key Methods\n\n" + "\n".join(f"- {m}" for m in key_methods)
         )
