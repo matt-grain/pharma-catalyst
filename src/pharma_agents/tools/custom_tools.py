@@ -35,22 +35,23 @@ def get_literature_dir() -> Path:
 
 
 class AlphaxivTool(BaseTool):
-    """Tool to fetch arxiv papers as markdown from alphaxiv.org."""
+    """Tool to fetch arxiv papers - tries alphaxiv, falls back to direct PDF extraction."""
 
     name: str = "fetch_arxiv_paper"
     description: str = (
-        "Fetches an arxiv paper summary from alphaxiv.org as markdown. "
+        "Fetches an arxiv paper and extracts key content as markdown. "
         "Input: arxiv paper ID (e.g., '2401.12345' or '2401.12345v2'). "
-        "Returns structured AI-generated overview optimized for LLM consumption. "
-        "Much faster than reading PDFs."
+        "Tries alphaxiv first, falls back to direct PDF extraction. "
+        "Returns abstract, methods, and key techniques."
     )
     cache_function: None = None
 
     # Rate limiting
     max_papers_per_run: int = 10
     min_interval_seconds: float = 1.0
-    timeout_seconds: float = 10.0  # Reduced from 30s
+    timeout_seconds: float = 10.0
     max_retries: int = 2
+    pdf_pages_to_extract: int = 8  # First N pages (abstract + methods usually)
     _papers_fetched: ClassVar[int] = 0
     _last_fetch: ClassVar[float] = 0.0
 
@@ -67,14 +68,46 @@ class AlphaxivTool(BaseTool):
                 if e.code == 404:
                     return None  # Not found, don't retry
                 if attempt < self.max_retries - 1:
-                    time.sleep(1)  # Brief pause before retry
+                    time.sleep(1)
             except Exception:
                 if attempt < self.max_retries - 1:
                     time.sleep(1)
         return None
 
+    def _extract_from_pdf(self, paper_id: str) -> str | None:
+        """Download PDF from arxiv and extract key sections."""
+        import tempfile
+        import urllib.request
+
+        try:
+            import pymupdf4llm
+        except ImportError:
+            return None
+
+        pdf_url = f"https://arxiv.org/pdf/{paper_id}"
+        pdf_path = Path(tempfile.gettempdir()) / f"arxiv_{paper_id.replace('/', '_')}.pdf"
+
+        try:
+            # Download PDF if not cached
+            if not pdf_path.exists():
+                urllib.request.urlretrieve(pdf_url, pdf_path)
+
+            # Extract markdown from first N pages
+            md = pymupdf4llm.to_markdown(
+                str(pdf_path), pages=list(range(self.pdf_pages_to_extract))
+            )
+
+            # Truncate if too long
+            if len(md) > 20000:
+                md = md[:20000] + "\n\n[... truncated, see full paper ...]"
+
+            return md
+
+        except Exception as e:
+            return f"PDF extraction failed: {e}"
+
     def _run(self, paper_id: str) -> str:
-        """Fetch paper from alphaxiv with retry."""
+        """Fetch paper - alphaxiv first, then PDF fallback."""
         paper_id = paper_id.strip()
 
         # Remove URL prefixes if present
@@ -101,21 +134,27 @@ class AlphaxivTool(BaseTool):
 
         AlphaxivTool._last_fetch = time.time()
 
-        # Try overview first (structured summary)
+        # Try alphaxiv overview first (fastest, structured)
         content = self._fetch_url(f"https://alphaxiv.org/overview/{paper_id}.md")
         if content:
             AlphaxivTool._papers_fetched += 1
-            return f"=== Paper {paper_id} (Overview) ===\n\n{content}"
+            return f"=== Paper {paper_id} (alphaxiv overview) ===\n\n{content}"
 
-        # Try full text as fallback
+        # Try alphaxiv full text
         content = self._fetch_url(f"https://alphaxiv.org/abs/{paper_id}.md")
         if content:
             AlphaxivTool._papers_fetched += 1
             if len(content) > 15000:
                 content = content[:15000] + "\n\n[... truncated ...]"
-            return f"=== Paper {paper_id} (Full Text) ===\n\n{content}"
+            return f"=== Paper {paper_id} (alphaxiv full) ===\n\n{content}"
 
-        return f"Paper {paper_id} not found or timed out. Use search abstract instead."
+        # Fallback: download PDF and extract with pymupdf4llm
+        content = self._extract_from_pdf(paper_id)
+        if content and not content.startswith("PDF extraction failed"):
+            AlphaxivTool._papers_fetched += 1
+            return f"=== Paper {paper_id} (arxiv PDF) ===\n\n{content}"
+
+        return f"Paper {paper_id} not available. Error: {content or 'unknown'}"
 
 
 class ArxivSearchTool(BaseTool):
