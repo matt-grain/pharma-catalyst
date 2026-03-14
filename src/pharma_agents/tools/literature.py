@@ -318,7 +318,7 @@ class FetchMorePapersTool(BaseTool):
             if not summary:
                 summary = " ".join(lines[5:10])[:500]
 
-            # Store paper
+            # Store paper with full content
             store_result = store_tool._run(
                 json.dumps(
                     {
@@ -326,6 +326,7 @@ class FetchMorePapersTool(BaseTool):
                         "title": title[:200],
                         "summary": summary[:1000],
                         "key_methods": [],
+                        "full_content": paper_content,
                     }
                 )
             )
