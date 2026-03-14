@@ -28,9 +28,17 @@ SKILLS_DIR = Path(__file__).parent.parent.parent.parent / ".claude" / "skills"
 def get_literature_dir() -> Path:
     """Get the literature directory for the current experiment.
 
-    Always uses the MAIN experiments dir (not worktree) so literature
-    persists across runs.
+    Uses PHARMA_EXPERIMENTS_DIR if set (for tests), otherwise uses
+    the MAIN experiments dir (not worktree) so literature persists.
     """
+    import os
+
+    # Test override - use same dir as other experiment files
+    override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
+    if override:
+        return Path(override) / "literature"
+
+    # Production - use main experiments dir (not worktree)
     return get_experiments_root() / get_experiment_name() / "literature"
 
 
@@ -259,12 +267,57 @@ class LiteratureStoreTool(BaseTool):
 
     name: str = "store_paper"
     description: str = (
-        "Stores a paper summary in the literature database with embeddings. "
+        "Stores a paper in the literature database with embeddings. "
         "Input: JSON with 'paper_id', 'title', 'summary', and optional 'key_methods'. "
+        "OR: Raw markdown content (will auto-extract paper_id and use content as summary). "
         "This enables semantic search for the Hypothesis Agent later."
     )
 
-    def _run(self, paper_json: str) -> str:
+    def _extract_from_markdown(self, content: str) -> dict | None:
+        """Try to extract paper info from markdown content."""
+        import re
+
+        paper_id = None
+        title = None
+
+        # Look for arxiv ID patterns
+        arxiv_match = re.search(r"arXiv:(\d{4}\.\d{4,5}(?:v\d+)?)", content)
+        if arxiv_match:
+            paper_id = arxiv_match.group(1)
+
+        # Look for paper ID in "=== Paper XXX ===" format
+        header_match = re.search(r"=== Paper (\S+)", content)
+        if header_match and not paper_id:
+            paper_id = header_match.group(1)
+
+        # Look for title
+        title_match = re.search(r"[Tt]itle[:\s]*([^\n]+)", content)
+        if title_match:
+            title = title_match.group(1).strip().strip("*#")
+
+        # Extract abstract as summary (try multiple patterns)
+        summary = None
+        for pattern in [
+            r"> Abstract:(.+?)(?:\n\n|\n\|)",  # Quoted abstract
+            r"Abstract[:\s>]*(.+?)(?:\n\n|\n\||$)",  # General abstract
+        ]:
+            abstract_match = re.search(pattern, content, re.DOTALL)
+            if abstract_match:
+                summary = abstract_match.group(1).strip()
+                break
+        if not summary:
+            summary = content[:1000]  # Fallback to first 1000 chars
+
+        if paper_id:
+            return {
+                "paper_id": paper_id,
+                "title": title or f"Paper {paper_id}",
+                "summary": summary,
+                "key_methods": [],
+            }
+        return None
+
+    def _run(self, paper_input: str) -> str:
         """Store paper in literature DB."""
         try:
             from fastembed import TextEmbedding
@@ -274,11 +327,18 @@ class LiteratureStoreTool(BaseTool):
         lit_dir = get_literature_dir()
         lit_dir.mkdir(parents=True, exist_ok=True)
 
-        # Parse input
+        # Try JSON first
+        paper = None
         try:
-            paper = json.loads(paper_json)
+            paper = json.loads(paper_input)
         except json.JSONDecodeError:
-            return "Error: Invalid JSON. Expected: {paper_id, title, summary, key_methods?}"
+            # Not JSON - try to extract from markdown
+            paper = self._extract_from_markdown(paper_input)
+            if not paper:
+                return (
+                    "Error: Could not parse input. Expected JSON {paper_id, title, summary} "
+                    "or markdown with arxiv ID and abstract."
+                )
 
         paper_id = paper.get("paper_id", "").strip()
         title = paper.get("title", "").strip()
