@@ -80,7 +80,9 @@ class LiteratureStoreTool(BaseTool):
                 break
         if not summary:
             # Fallback: skip headers and get content
-            lines = [l for l in content.split("\n") if l.strip() and not l.startswith("===")]
+            lines = [
+                line for line in content.split("\n") if line.strip() and not line.startswith("===")
+            ]
             summary = " ".join(lines[:5])[:1000]
 
         # Extract key techniques/methods
@@ -91,7 +93,9 @@ class LiteratureStoreTool(BaseTool):
         if techniques_match:
             # Split on commas or periods
             methods_text = techniques_match.group(1).strip()
-            key_methods = [m.strip() for m in re.split(r"[,.]", methods_text) if m.strip()]
+            key_methods = [
+                m.strip() for m in re.split(r"[,.]", methods_text) if m.strip()
+            ]
 
         if paper_id:
             return {
@@ -179,7 +183,11 @@ class LiteratureStoreTool(BaseTool):
                 has_full = True
 
         # Build summary markdown with links
-        full_link = f"**Full Content:** [{safe_id}_full.md]({safe_id}_full.md)\n" if has_full else ""
+        full_link = (
+            f"**Full Content:** [{safe_id}_full.md]({safe_id}_full.md)\n"
+            if has_full
+            else ""
+        )
         (papers_dir / f"{safe_id}.md").write_text(
             f"# {title}\n\n**Paper ID:** {paper_id}\n"
             f"**PDF:** https://arxiv.org/pdf/{paper_id}.pdf\n"

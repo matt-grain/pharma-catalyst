@@ -57,7 +57,8 @@ def generate_run_report(
 
     # Calculate final stats
     successful_exps = [
-        e for e in experiments
+        e
+        for e in experiments
         if e.get("result") == "success" or e.get("success") is True
     ]
     final_score = scores[-1] if scores else baseline_score
@@ -131,7 +132,13 @@ def generate_run_report(
     )
 
     # Chart 3: Success rate pie chart
-    success_count = len([e for e in experiments if e.get("result") == "success" or e.get("success") is True])
+    success_count = len(
+        [
+            e
+            for e in experiments
+            if e.get("result") == "success" or e.get("success") is True
+        ]
+    )
     failure_count = len(experiments) - success_count
     fig.add_trace(
         go.Pie(
@@ -149,7 +156,9 @@ def generate_run_report(
     # Chart 4: Improvement per iteration
     improvements = []
     for exp in experiments:
-        if (exp.get("result") == "success" or exp.get("success") is True) and exp.get("improvement_pct"):
+        if (exp.get("result") == "success" or exp.get("success") is True) and exp.get(
+            "improvement_pct"
+        ):
             improvements.append(exp["improvement_pct"])
         else:
             improvements.append(0)

@@ -113,9 +113,9 @@ def main():
     paper_id = sys.argv[1] if len(sys.argv) > 1 else "2507.18557v3"
     pages = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"PDF Extraction Comparison: arxiv {paper_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     pdf_path = download_arxiv_pdf(paper_id)
 
@@ -158,9 +158,9 @@ def main():
         print("Not installed (uv add docling)")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for name, data in results.items():
         print(f"{name:15} | Time: {data['time']:.3f}s | Chars: {data['chars']:,}")
 

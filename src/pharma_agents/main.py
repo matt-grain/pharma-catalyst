@@ -248,6 +248,7 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
     def clean_terminal_chars(text: str) -> str:
         """Remove terminal UI box-drawing characters and clean up text."""
         import re
+
         # Remove box-drawing characters (│ ╭ ╮ ╯ ╰ ─ etc.)
         text = re.sub(r"[│╭╮╯╰─╱╲┌┐└┘├┤┬┴┼]", "", text)
         # Remove ANSI escape sequences

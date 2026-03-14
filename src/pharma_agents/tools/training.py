@@ -178,7 +178,9 @@ class InstallPackageTool(BaseTool):
 
         # Limit installs per run
         if len(InstallPackageTool._packages_installed) >= self.max_installs_per_run:
-            return f"Error: Max installs ({self.max_installs_per_run}) reached this run."
+            return (
+                f"Error: Max installs ({self.max_installs_per_run}) reached this run."
+            )
 
         # Check if already installed this run
         if package in InstallPackageTool._packages_installed:
