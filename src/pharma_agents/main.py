@@ -366,15 +366,26 @@ def run(iterations: int = 10) -> None:
     crew = PharmaAgentsCrew()
 
     # Check if we need to run the Archivist (literature research)
+    # Runs on: (1) first time (no literature exists), or (2) exploration mode (stuck)
     literature_dir = experiments_dir / "literature"
     literature_index = literature_dir / "index.json"
-    run_archivist = not literature_index.exists()
+    no_literature = not literature_index.exists()
+    exploration_mode = memory.is_globally_stagnant() or memory.is_stuck(run_number)
 
-    if run_archivist:
+    run_archivist = no_literature or exploration_mode
+    archivist_reason = (
+        "No literature database"
+        if no_literature
+        else "EXPLORATION MODE - gathering fresh papers"
+        if exploration_mode
+        else None
+    )
+
+    if run_archivist and archivist_reason:
         logger.info("=" * 60)
-        logger.info("ARCHIVIST: Gathering recent literature...")
+        logger.info(f"ARCHIVIST: {archivist_reason}")
         logger.info("=" * 60)
-        print("\n[ARCHIVIST] No literature database found. Gathering recent papers...")
+        print(f"\n[ARCHIVIST] {archivist_reason}...")
 
         from .memory import get_baseline_config
 
@@ -386,13 +397,15 @@ def run(iterations: int = 10) -> None:
         try:
             with capture_stdout_to_log(log_file):
                 crew.research_crew().kickoff(inputs=archivist_inputs)
-            logger.info("Archivist completed - literature database created")
-            print("[ARCHIVIST] Done! Literature database created.\n")
+            logger.info("Archivist completed - literature database updated")
+            print("[ARCHIVIST] Done! Literature database updated.\n")
         except Exception as e:
             logger.warning(f"Archivist failed (non-fatal): {e}")
-            print(f"[ARCHIVIST] Warning: {e} - continuing without literature\n")
+            print(f"[ARCHIVIST] Warning: {e} - continuing without fresh literature\n")
     else:
-        logger.info("Literature database exists - skipping Archivist")
+        logger.info(
+            "Literature database exists and not in exploration mode - skipping Archivist"
+        )
 
     # Track experiment history for context
     experiment_history: list[dict] = []

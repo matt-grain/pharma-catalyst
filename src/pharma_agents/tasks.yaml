@@ -39,6 +39,11 @@ hypothesis_task:
     FIRST: Query the literature database for recent techniques (use query_literature tool)
     with queries like "gradient boosting features" or "attention mechanism molecular".
 
+    IF you're stuck or need fresh ideas:
+    - Use fetch_more_papers tool with a specific query (e.g., "molecular descriptors solubility")
+    - This searches arxiv for new papers and adds them to your literature database
+    - Then query_literature again to find relevant techniques
+
     Based on the memory AND literature insights, propose ONE specific change that:
     1. Is DIFFERENT from what failed before (check "What Failed" section!)
     2. Builds on what worked (check "What Worked" section)

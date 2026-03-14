@@ -137,6 +137,28 @@ Top 5 papers for 'gradient boosting molecular features':
 
 ---
 
+### `fetch_more_papers`
+**Used by:** Hypothesis Agent
+
+Searches arxiv and fetches fresh papers on-demand when stuck or exploring.
+
+```
+Input: Search query (e.g., "molecular descriptors solubility prediction")
+Output: Summary of papers found and stored
+Limit: 3 fetch rounds per run
+```
+
+Workflow:
+1. Searches arxiv for papers matching query
+2. Fetches top 3 papers via alphaxiv
+3. Stores them in the literature database
+4. Returns summary of techniques found
+
+**Use case:** When the Hypothesis Agent has exhausted existing literature
+or needs fresh ideas for a specific technique.
+
+---
+
 ## Knowledge Tools
 
 ### `load_skill`
@@ -172,6 +194,7 @@ Limit: 3 skills per run
 | `fetch_arxiv_paper` | 1s interval | 10 papers |
 | `store_paper` | - | - |
 | `query_literature` | - | - |
+| `fetch_more_papers` | 1s interval | 3 rounds |
 | `load_skill` | - | 3 skills |
 | `code_check` | no cache | - |
 

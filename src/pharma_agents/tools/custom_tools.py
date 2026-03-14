@@ -317,6 +317,103 @@ class LiteratureQueryTool(BaseTool):
         return "\n".join(output)
 
 
+class FetchMorePapersTool(BaseTool):
+    """Tool for Hypothesis Agent to fetch fresh papers on a specific topic."""
+
+    name: str = "fetch_more_papers"
+    description: str = (
+        "Fetch fresh papers on a specific topic when you need more ideas. "
+        "Use this when query_literature doesn't have enough relevant papers. "
+        "Input: specific topic (e.g., 'attention mechanisms for molecules'). "
+        "This searches arxiv, fetches via alphaxiv, and stores in literature DB."
+    )
+    cache_function: None = None
+
+    max_calls_per_run: int = 2
+    _calls_done: ClassVar[int] = 0
+
+    def _run(self, topic: str) -> str:
+        """Fetch more papers on a topic."""
+        if FetchMorePapersTool._calls_done >= self.max_calls_per_run:
+            return f"Error: Max calls ({self.max_calls_per_run}) reached. Use existing literature."
+
+        FetchMorePapersTool._calls_done += 1
+
+        # Use the other tools internally
+        search_tool = ArxivSearchTool()
+        fetch_tool = AlphaxivTool()
+        store_tool = LiteratureStoreTool()
+
+        results = []
+
+        # Search for papers
+        search_result = search_tool._run(topic)
+        if "No papers found" in search_result:
+            return f"No papers found for '{topic}'. Try a different topic."
+
+        results.append(f"Searched arxiv for '{topic}'")
+
+        # Extract paper IDs from search results (format: **XXXX.XXXXX**)
+        import re
+
+        paper_ids = re.findall(r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*", search_result)
+
+        if not paper_ids:
+            return "Could not extract paper IDs from search. Try different keywords."
+
+        # Fetch and store top 3 papers
+        papers_stored = 0
+        for paper_id in paper_ids[:3]:
+            # Fetch paper
+            paper_content = fetch_tool._run(paper_id)
+            if "not found" in paper_content.lower():
+                continue
+
+            # Extract title and summary from markdown content
+            lines = paper_content.split("\n")
+            title = paper_id  # Default
+            summary = ""
+
+            for line in lines:
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                elif line.startswith("## Summary") or line.startswith("## Abstract"):
+                    # Get next few lines as summary
+                    idx = lines.index(line)
+                    summary = " ".join(lines[idx + 1 : idx + 5]).strip()
+                    break
+
+            if not summary:
+                summary = " ".join(lines[5:10])[:500]
+
+            # Store paper
+            store_result = store_tool._run(
+                json.dumps(
+                    {
+                        "paper_id": paper_id,
+                        "title": title[:200],
+                        "summary": summary[:1000],
+                        "key_methods": [],
+                    }
+                )
+            )
+
+            if "Stored" in store_result:
+                papers_stored += 1
+                results.append(f"  - Stored {paper_id}: {title[:50]}...")
+
+        if papers_stored > 0:
+            results.append(
+                f"\nAdded {papers_stored} papers to literature DB. Use query_literature to search them."
+            )
+        else:
+            results.append(
+                "\nCould not store any papers. They may not be indexed on alphaxiv yet."
+            )
+
+        return "\n".join(results)
+
+
 class ReadTrainPyTool(BaseTool):
     """Tool to read the train.py file."""
 

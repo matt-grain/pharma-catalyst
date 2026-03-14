@@ -22,6 +22,7 @@ from .tools.custom_tools import (
     LiteratureStoreTool,
     LiteratureQueryTool,
     SkillLoaderTool,
+    FetchMorePapersTool,
 )
 
 
@@ -103,6 +104,7 @@ class PharmaAgentsCrew:
                 ReadTrainPyTool(),
                 LiteratureQueryTool(),
                 SkillLoaderTool(),
+                FetchMorePapersTool(),  # Request fresh papers when stuck
             ],
             verbose=True,
         )
