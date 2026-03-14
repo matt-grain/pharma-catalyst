@@ -122,7 +122,7 @@ class ArxivSearchTool(BaseTool):
     cache_function: None = None
 
     max_results: int = 10
-    max_searches_per_run: int = 5
+    max_searches_per_run: int = 8  # Increased from 5
     min_interval_seconds: float = 3.0  # arxiv recommends 3s between requests
     max_retries: int = 2  # Reduced for faster fallback
     _searches_done: ClassVar[int] = 0
@@ -229,7 +229,9 @@ class ArxivSearchTool(BaseTool):
         """Search for papers with arxiv + Semantic Scholar fallback."""
         if ArxivSearchTool._searches_done >= self.max_searches_per_run:
             return (
-                f"Error: Max searches ({self.max_searches_per_run}) reached this run."
+                f"STOP SEARCHING. You have already done {self.max_searches_per_run} searches. "
+                f"Do NOT call search_arxiv again. "
+                f"Now use store_paper to save the papers you already found."
             )
 
         # Rate limiting
