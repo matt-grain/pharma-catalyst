@@ -5,12 +5,14 @@ This module defines the agent crew that autonomously iterates on
 molecular property prediction models.
 """
 
+import os
 import time
+
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from dotenv import load_dotenv
 from loguru import logger
-import os
+from pydantic import BaseModel
 
 from .tools import (
     AlphaxivTool,
@@ -25,6 +27,15 @@ from .tools import (
     SkillLoaderTool,
     WriteTrainPyTool,
 )
+
+
+class HypothesisOutput(BaseModel):
+    """Structured output from hypothesis agent."""
+
+    proposal: str
+    reasoning: str
+    change_description: str
+    literature_insight: str | None = None
 
 
 class LoggingLLM(LLM):
@@ -56,13 +67,13 @@ load_dotenv()
 
 
 # Configure LLM from environment
-def get_llm() -> LLM:
+def get_llm(temperature: float = 0.7) -> LLM:
     """Get configured LLM from environment variables."""
     model = os.getenv("LLM_MODEL", "gemini/gemini-3-flash-preview")
     return LoggingLLM(
         model=model,
         api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=0.7,
+        temperature=temperature,
     )
 
 
@@ -100,7 +111,7 @@ class PharmaAgentsCrew:
         """Research Scientist who proposes improvements."""
         return Agent(
             config=self.agents_config["hypothesis_agent"],  # type: ignore[index]
-            llm=get_llm(),
+            llm=get_llm(temperature=0.8),  # Higher for creativity
             tools=[
                 ReadTrainPyTool(),
                 LiteratureQueryTool(),
@@ -115,7 +126,7 @@ class PharmaAgentsCrew:
         """ML Engineer who implements changes."""
         return Agent(
             config=self.agents_config["model_agent"],  # type: ignore[index]
-            llm=get_llm(),
+            llm=get_llm(temperature=0.3),  # Lower for code generation
             tools=[
                 ReadTrainPyTool(),
                 WriteTrainPyTool(),
@@ -152,6 +163,7 @@ class PharmaAgentsCrew:
         """Task: Propose an improvement."""
         return Task(
             config=self.tasks_config["hypothesis_task"],  # type: ignore[index,call-arg]
+            output_pydantic=HypothesisOutput,
         )
 
     @task

@@ -19,6 +19,10 @@ from .crew import PharmaAgentsCrew
 from .tools.evaluate import run_training, log_experiment
 from .memory import AgentMemory, get_metric_name, is_better, compute_improvement_pct
 
+# Content truncation limits
+MAX_HYPOTHESIS_LENGTH = 200
+MAX_REASONING_LENGTH = 300
+
 
 class TeeStream:
     """Stream that writes to both stdout and a log file."""
@@ -282,10 +286,10 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
                     reasoning = clean_terminal_chars(lines[i + 1])
 
         # Truncate if too long
-        if len(hypothesis) > 200:
-            hypothesis = hypothesis[:197] + "..."
-        if len(reasoning) > 300:
-            reasoning = reasoning[:297] + "..."
+        if len(hypothesis) > MAX_HYPOTHESIS_LENGTH:
+            hypothesis = hypothesis[: MAX_HYPOTHESIS_LENGTH - 3] + "..."
+        if len(reasoning) > MAX_REASONING_LENGTH:
+            reasoning = reasoning[: MAX_REASONING_LENGTH - 3] + "..."
 
     except Exception as e:
         logger.debug(f"Could not parse hypothesis from log: {e}")

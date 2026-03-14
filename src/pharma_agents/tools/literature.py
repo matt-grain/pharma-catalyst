@@ -11,6 +11,11 @@ from crewai.tools import BaseTool
 
 from pharma_agents.memory import get_experiment_name, get_experiments_root
 
+# Content limits
+MAX_SUMMARY_LENGTH = 1000
+MAX_KEY_METHODS = 5
+MIN_FULL_CONTENT_LENGTH = 200
+
 
 def get_literature_dir() -> Path:
     """Get the literature directory for the current experiment.
@@ -85,7 +90,7 @@ class LiteratureStoreTool(BaseTool):
                 for line in content.split("\n")
                 if line.strip() and not line.startswith("===")
             ]
-            summary = " ".join(lines[:5])[:1000]
+            summary = " ".join(lines[:5])[:MAX_SUMMARY_LENGTH]
 
         # Extract key techniques/methods
         key_methods = []
@@ -104,7 +109,7 @@ class LiteratureStoreTool(BaseTool):
                 "paper_id": paper_id,
                 "title": title or f"Paper {paper_id}",
                 "summary": summary,
-                "key_methods": key_methods[:5],  # Limit to 5
+                "key_methods": key_methods[:MAX_KEY_METHODS],
             }
         return None
 
@@ -177,7 +182,7 @@ class LiteratureStoreTool(BaseTool):
 
         # Save full content only if it's real full content (not arxiv abstract fallback)
         has_full = False
-        if full_content and len(full_content) > 200:
+        if full_content and len(full_content) > MIN_FULL_CONTENT_LENGTH:
             # Skip noisy arxiv abstract fallback - only save alphaxiv full content
             is_arxiv_abstract = "(arxiv abstract)" in full_content[:100]
             if not is_arxiv_abstract:

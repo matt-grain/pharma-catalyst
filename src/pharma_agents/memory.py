@@ -145,7 +145,11 @@ class AgentMemory:
     def _load(self) -> None:
         """Load memory from disk."""
         if self.memory_path.exists():
-            data = json.loads(self.memory_path.read_text())
+            try:
+                data = json.loads(self.memory_path.read_text())
+            except (json.JSONDecodeError, ValueError):
+                # Corrupted memory file — start fresh rather than crashing.
+                return
             baseline = get_baseline_score()
 
             # Load runs
