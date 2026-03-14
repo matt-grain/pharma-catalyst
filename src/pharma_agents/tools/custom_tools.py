@@ -40,14 +40,32 @@ class AlphaxivTool(BaseTool):
     # Rate limiting
     max_papers_per_run: int = 10
     min_interval_seconds: float = 1.0
+    timeout_seconds: float = 10.0  # Reduced from 30s
+    max_retries: int = 2
     _papers_fetched: ClassVar[int] = 0
     _last_fetch: ClassVar[float] = 0.0
 
-    def _run(self, paper_id: str) -> str:
-        """Fetch paper from alphaxiv."""
+    def _fetch_url(self, url: str) -> str | None:
+        """Fetch URL with retry logic."""
         import urllib.request
         import urllib.error
 
+        for attempt in range(self.max_retries):
+            try:
+                with urllib.request.urlopen(url, timeout=self.timeout_seconds) as resp:
+                    return resp.read().decode("utf-8")
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return None  # Not found, don't retry
+                if attempt < self.max_retries - 1:
+                    time.sleep(1)  # Brief pause before retry
+            except Exception:
+                if attempt < self.max_retries - 1:
+                    time.sleep(1)
+        return None
+
+    def _run(self, paper_id: str) -> str:
+        """Fetch paper from alphaxiv with retry."""
         paper_id = paper_id.strip()
 
         # Remove URL prefixes if present
@@ -65,41 +83,30 @@ class AlphaxivTool(BaseTool):
 
         # Check limits
         if AlphaxivTool._papers_fetched >= self.max_papers_per_run:
-            return (
-                f"Error: Max papers limit ({self.max_papers_per_run}) reached this run."
-            )
+            return f"Error: Max papers limit ({self.max_papers_per_run}) reached."
 
         # Rate limiting
         elapsed = time.time() - AlphaxivTool._last_fetch
         if elapsed < self.min_interval_seconds:
             time.sleep(self.min_interval_seconds - elapsed)
 
+        AlphaxivTool._last_fetch = time.time()
+
         # Try overview first (structured summary)
-        url = f"https://alphaxiv.org/overview/{paper_id}.md"
-        try:
-            with urllib.request.urlopen(url, timeout=30) as response:
-                content = response.read().decode("utf-8")
-                AlphaxivTool._papers_fetched += 1
-                AlphaxivTool._last_fetch = time.time()
-                return f"=== Paper {paper_id} (Overview) ===\n\n{content}"
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                # Try full text as fallback
-                url = f"https://alphaxiv.org/abs/{paper_id}.md"
-                try:
-                    with urllib.request.urlopen(url, timeout=30) as response:
-                        content = response.read().decode("utf-8")
-                        AlphaxivTool._papers_fetched += 1
-                        AlphaxivTool._last_fetch = time.time()
-                        # Truncate if very long
-                        if len(content) > 15000:
-                            content = content[:15000] + "\n\n[... truncated ...]"
-                        return f"=== Paper {paper_id} (Full Text) ===\n\n{content}"
-                except urllib.error.HTTPError:
-                    return f"Paper {paper_id} not found on alphaxiv. Try: https://arxiv.org/abs/{paper_id}"
-            return f"Error fetching paper: {e}"
-        except Exception as e:
-            return f"Error: {e}"
+        content = self._fetch_url(f"https://alphaxiv.org/overview/{paper_id}.md")
+        if content:
+            AlphaxivTool._papers_fetched += 1
+            return f"=== Paper {paper_id} (Overview) ===\n\n{content}"
+
+        # Try full text as fallback
+        content = self._fetch_url(f"https://alphaxiv.org/abs/{paper_id}.md")
+        if content:
+            AlphaxivTool._papers_fetched += 1
+            if len(content) > 15000:
+                content = content[:15000] + "\n\n[... truncated ...]"
+            return f"=== Paper {paper_id} (Full Text) ===\n\n{content}"
+
+        return f"Paper {paper_id} not found or timed out. Use search abstract instead."
 
 
 class ArxivSearchTool(BaseTool):
