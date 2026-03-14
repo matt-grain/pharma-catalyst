@@ -2,31 +2,31 @@ archivist_task:
   description: >
     You are a Literature Archivist gathering recent research on {property} prediction.
 
-    Your goal: Build a searchable knowledge base of techniques from recent papers (last 2 years).
+    Your goal: Build a searchable knowledge base of techniques from recent papers.
 
-    Steps:
-    1. Search for papers on "{property} prediction machine learning" (use search_arxiv tool)
-    2. Search for related terms: "molecular property prediction", "ADMET", "cheminformatics ML"
-    3. For papers WITH arxiv IDs (format like 2401.12345): fetch summaries using fetch_arxiv_paper
-    4. For papers marked [S2-ONLY]: store directly using the abstract from search results
-    5. Store each paper with its summary and key methods (use store_paper tool)
+    CRITICAL WORKFLOW - You MUST complete ALL steps:
+    1. Search arxiv for "{property} prediction" papers (use search_arxiv)
+    2. For EACH paper found with an arxiv ID (format XXXX.XXXXX):
+       a. Fetch the paper content (use fetch_arxiv_paper with the paper ID)
+       b. IMMEDIATELY store it (use store_paper with the fetched content)
+    3. Repeat search with related terms: "molecular property prediction", "ADMET ML"
 
-    IMPORTANT: Some papers come from Semantic Scholar and don't have arxiv IDs.
-    These are marked [S2-ONLY] in search results. For these papers:
-    - Do NOT try to fetch them (fetch_arxiv_paper will fail)
-    - Store them directly using the abstract from the search results
+    MANDATORY: After EVERY fetch_arxiv_paper call, you MUST call store_paper!
+    Pass the entire fetched content directly to store_paper - it will extract the paper info.
 
-    Constraints:
-    - Focus on papers from 2023-2025 (recent advances)
-    - Prioritize papers with novel methods, not just applications
-    - Extract ACTIONABLE techniques (e.g., "use attention pooling", "combine fingerprints with descriptors")
+    Example workflow:
+    - Call: fetch_arxiv_paper("2401.12345")
+    - Get: "=== Paper 2401.12345 === Title: ... Summary: ..."
+    - Call: store_paper(<the entire response above>)
+    - Get: "Stored paper 2401.12345 with embedding"
+
+    Store at least 5-10 papers before finishing.
 
     Output format:
-    PAPERS INDEXED: [count]
-    KEY TECHNIQUES FOUND:
-    - [technique 1 from paper X]
-    - [technique 2 from paper Y]
-    ...
+    PAPERS STORED: [count]
+    KEY TECHNIQUES:
+    - [technique from paper X]
+    - [technique from paper Y]
   expected_output: >
     Summary of papers indexed with list of key techniques discovered
   agent: archivist_agent
