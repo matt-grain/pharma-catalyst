@@ -103,11 +103,11 @@ class AlphaxivTool(BaseTool):
 
 
 class ArxivSearchTool(BaseTool):
-    """Tool to search arxiv for recent papers."""
+    """Tool to search arxiv for recent papers with Semantic Scholar fallback."""
 
     name: str = "search_arxiv"
     description: str = (
-        "Searches arxiv for recent papers on a topic. "
+        "Searches for recent papers on a topic (tries arxiv, falls back to Semantic Scholar). "
         "Input: search query (e.g., 'ADMET prediction graph neural network'). "
         "Returns list of paper IDs with titles and abstracts. "
         "Use this to find relevant papers, then fetch_arxiv_paper for details."
@@ -116,21 +116,18 @@ class ArxivSearchTool(BaseTool):
 
     max_results: int = 10
     max_searches_per_run: int = 5
+    min_interval_seconds: float = 3.0  # arxiv recommends 3s between requests
+    max_retries: int = 2  # Reduced for faster fallback
     _searches_done: ClassVar[int] = 0
+    _last_search: ClassVar[float] = 0.0
 
-    def _run(self, query: str) -> str:
-        """Search arxiv API."""
+    def _search_arxiv(self, query: str) -> list[dict] | None:
+        """Try arxiv API. Returns list of papers or None on failure."""
         import urllib.request
         import urllib.parse
+        import urllib.error
         import xml.etree.ElementTree as ET
 
-        if ArxivSearchTool._searches_done >= self.max_searches_per_run:
-            return (
-                f"Error: Max searches ({self.max_searches_per_run}) reached this run."
-            )
-
-        # Build arxiv API query
-        # Focus on cs.LG (machine learning) and q-bio (quantitative biology)
         search_query = urllib.parse.quote(f"all:{query}")
         url = (
             f"http://export.arxiv.org/api/query?"
@@ -138,49 +135,126 @@ class ArxivSearchTool(BaseTool):
             f"&sortBy=submittedDate&sortOrder=descending"
         )
 
+        for attempt in range(self.max_retries):
+            try:
+                ArxivSearchTool._last_search = time.time()
+                with urllib.request.urlopen(url, timeout=15) as response:
+                    xml_content = response.read().decode("utf-8")
+
+                root = ET.fromstring(xml_content)
+                ns = {"atom": "http://www.w3.org/2005/Atom"}
+
+                results = []
+                for entry in root.findall("atom:entry", ns):
+                    paper_id = entry.find("atom:id", ns)
+                    title = entry.find("atom:title", ns)
+                    summary = entry.find("atom:summary", ns)
+                    published = entry.find("atom:published", ns)
+
+                    if paper_id is not None and title is not None:
+                        pid = paper_id.text.split("/abs/")[-1] if paper_id.text else ""
+                        results.append(
+                            {
+                                "id": pid,
+                                "title": " ".join(title.text.split())
+                                if title.text
+                                else "",
+                                "abstract": summary.text[:300]
+                                if summary is not None and summary.text
+                                else "",
+                                "date": published.text[:10]
+                                if published is not None and published.text
+                                else "",
+                                "source": "arxiv",
+                            }
+                        )
+                return results if results else None
+
+            except urllib.error.HTTPError as e:
+                if e.code == 429:
+                    time.sleep((2**attempt) * 2)
+                else:
+                    return None
+            except Exception:
+                return None
+        return None
+
+    def _search_semantic_scholar(self, query: str) -> list[dict] | None:
+        """Fallback to Semantic Scholar API."""
+        import urllib.request
+        import urllib.parse
+
+        encoded_query = urllib.parse.quote(query)
+        url = (
+            f"https://api.semanticscholar.org/graph/v1/paper/search?"
+            f"query={encoded_query}&limit={self.max_results}"
+            f"&fields=paperId,externalIds,title,abstract,year"
+        )
+
         try:
-            with urllib.request.urlopen(url, timeout=30) as response:
-                xml_content = response.read().decode("utf-8")
-
-            ArxivSearchTool._searches_done += 1
-
-            # Parse XML
-            root = ET.fromstring(xml_content)
-            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", "pharma-agents/0.1")
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode("utf-8"))
 
             results = []
-            for entry in root.findall("atom:entry", ns):
-                paper_id = entry.find("atom:id", ns)
-                title = entry.find("atom:title", ns)
-                summary = entry.find("atom:summary", ns)
-                published = entry.find("atom:published", ns)
+            for paper in data.get("data", []):
+                # Prefer arxiv ID if available
+                external_ids = paper.get("externalIds", {})
+                arxiv_id = external_ids.get("ArXiv", "")
+                paper_id = arxiv_id if arxiv_id else paper.get("paperId", "")[:12]
 
-                if paper_id is not None and title is not None:
-                    # Extract just the ID from the URL
-                    pid = paper_id.text.split("/abs/")[-1] if paper_id.text else ""
-                    ttl = " ".join(title.text.split()) if title.text else ""
-                    abstract = (
-                        summary.text[:300] + "..."
-                        if summary is not None and summary.text
-                        else ""
-                    )
-                    pub_date = (
-                        published.text[:10]
-                        if published is not None and published.text
-                        else ""
-                    )
+                results.append(
+                    {
+                        "id": paper_id,
+                        "title": paper.get("title", ""),
+                        "abstract": (paper.get("abstract") or "")[:300],
+                        "date": str(paper.get("year", "")),
+                        "source": "s2" if not arxiv_id else "arxiv",
+                    }
+                )
+            return results if results else None
 
-                    results.append(f"- **{pid}** ({pub_date}): {ttl}\n  {abstract}\n")
+        except Exception:
+            return None
 
-            if not results:
-                return f"No papers found for query: {query}"
-
-            return f"Found {len(results)} papers for '{query}':\n\n" + "\n".join(
-                results
+    def _run(self, query: str) -> str:
+        """Search for papers with arxiv + Semantic Scholar fallback."""
+        if ArxivSearchTool._searches_done >= self.max_searches_per_run:
+            return (
+                f"Error: Max searches ({self.max_searches_per_run}) reached this run."
             )
 
-        except Exception as e:
-            return f"Error searching arxiv: {e}"
+        # Rate limiting
+        elapsed = time.time() - ArxivSearchTool._last_search
+        if elapsed < self.min_interval_seconds:
+            time.sleep(self.min_interval_seconds - elapsed)
+
+        # Try arxiv first
+        results = self._search_arxiv(query)
+        source_note = ""
+
+        # Fallback to Semantic Scholar if arxiv fails
+        if not results:
+            results = self._search_semantic_scholar(query)
+            source_note = " (via Semantic Scholar - arxiv unavailable)"
+
+        ArxivSearchTool._searches_done += 1
+
+        if not results:
+            return f"No papers found for query: {query}"
+
+        formatted = []
+        for r in results:
+            abstract = r["abstract"] + "..." if r["abstract"] else ""
+            formatted.append(
+                f"- **{r['id']}** ({r['date']}): {r['title']}\n  {abstract}\n"
+            )
+
+        return (
+            f"Found {len(results)} papers for '{query}'{source_note}:\n\n"
+            + "\n".join(formatted)
+        )
 
 
 class LiteratureStoreTool(BaseTool):
