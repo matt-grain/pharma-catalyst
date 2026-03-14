@@ -212,6 +212,34 @@ class TestLiteratureStoreTool:
         assert "multi.001" in index["papers"]
         assert "multi.002" in index["papers"]
 
+    @pytest.mark.timeout(60)
+    def test_store_from_alphaxiv_markdown(self, experiments_dir):
+        """Store paper from raw alphaxiv markdown format."""
+        from pharma_agents.tools.custom_tools import LiteratureStoreTool
+
+        tool = LiteratureStoreTool()
+
+        # Alphaxiv format with Summary and Key Techniques
+        alphaxiv_markdown = """=== Paper 2310.07351 ===
+Title: Atom-Motif Contrastive Transformer for Molecular Property Prediction
+Summary: Proposes AMCT, a Graph Transformer that considers both atom-level and motif-level (functional group) interactions to capture critical molecular patterns.
+Key Techniques: Motif-level interaction modeling, Atom-Motif Contrastive learning, Property-aware attention mechanism, Graph Transformer (GT) backbone.
+"""
+
+        result = tool._run(alphaxiv_markdown)
+
+        assert "Stored paper" in result
+        assert "2310.07351" in result
+
+        # Verify correct extraction
+        lit_dir = experiments_dir / "literature"
+        index = json.loads((lit_dir / "index.json").read_text())
+
+        paper = index["papers"]["2310.07351"]
+        assert "Atom-Motif Contrastive Transformer" in paper["title"]
+        assert "AMCT" in paper["summary"]
+        assert len(paper["key_methods"]) >= 3
+
 
 class TestLiteratureQueryTool:
     """Test LiteratureQueryTool with real semantic search."""

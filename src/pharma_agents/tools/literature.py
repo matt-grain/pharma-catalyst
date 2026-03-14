@@ -59,25 +59,38 @@ class LiteratureStoreTool(BaseTool):
         if title_match:
             title = title_match.group(1).strip().strip("*#")
 
-        # Extract abstract as summary (try multiple patterns)
+        # Extract abstract/summary (try multiple patterns)
         summary = None
         for pattern in [
-            r"> Abstract:(.+?)(?:\n\n|\n\|)",  # Quoted abstract
+            r"> Abstract:(.+?)(?:\n\n|\n\|)",  # Quoted abstract (arxiv page)
+            r"Summary[:\s]*(.+?)(?:\n\n|Key Techniques|Key Methods|$)",  # alphaxiv format
             r"Abstract[:\s>]*(.+?)(?:\n\n|\n\||$)",  # General abstract
         ]:
-            abstract_match = re.search(pattern, content, re.DOTALL)
-            if abstract_match:
-                summary = abstract_match.group(1).strip()
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                summary = match.group(1).strip()
                 break
         if not summary:
-            summary = content[:1000]  # Fallback to first 1000 chars
+            # Fallback: skip headers and get content
+            lines = [l for l in content.split("\n") if l.strip() and not l.startswith("===")]
+            summary = " ".join(lines[:5])[:1000]
+
+        # Extract key techniques/methods
+        key_methods = []
+        techniques_match = re.search(
+            r"Key Techniques[:\s]*(.+?)(?:\n\n|$)", content, re.DOTALL
+        )
+        if techniques_match:
+            # Split on commas or periods
+            methods_text = techniques_match.group(1).strip()
+            key_methods = [m.strip() for m in re.split(r"[,.]", methods_text) if m.strip()]
 
         if paper_id:
             return {
                 "paper_id": paper_id,
                 "title": title or f"Paper {paper_id}",
                 "summary": summary,
-                "key_methods": [],
+                "key_methods": key_methods[:5],  # Limit to 5
             }
         return None
 
