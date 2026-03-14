@@ -69,9 +69,10 @@ class LiteratureStoreTool(BaseTool):
         # Extract abstract/summary (try multiple patterns)
         summary = None
         for pattern in [
-            r"> Abstract:(.+?)(?:\n\n|\n\|)",  # Quoted abstract (arxiv page)
+            r"> Abstract:(.+?)(?:\n\n|\n\||$)",  # Quoted abstract (arxiv page) - can end at EOF
             r"Summary[:\s]*(.+?)(?:\n\n|Key Techniques|Key Methods|$)",  # alphaxiv format
-            r"Abstract[:\s>]*(.+?)(?:\n\n|\n\||$)",  # General abstract
+            r"\nAbstract\n(.+?)(?:\n\n|$)",  # Abstract as section header
+            r"^Abstract[:\s]+(.+?)(?:\n\n|$)",  # Abstract at line start (not in YAML)
         ]:
             match = re.search(pattern, content, re.DOTALL)
             if match:
