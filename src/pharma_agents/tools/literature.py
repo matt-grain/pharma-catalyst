@@ -81,7 +81,9 @@ class LiteratureStoreTool(BaseTool):
         if not summary:
             # Fallback: skip headers and get content
             lines = [
-                line for line in content.split("\n") if line.strip() and not line.startswith("===")
+                line
+                for line in content.split("\n")
+                if line.strip() and not line.startswith("===")
             ]
             summary = " ".join(lines[:5])[:1000]
 
