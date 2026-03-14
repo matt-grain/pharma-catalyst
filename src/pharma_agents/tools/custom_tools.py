@@ -239,14 +239,14 @@ class ArxivSearchTool(BaseTool):
         if elapsed < self.min_interval_seconds:
             time.sleep(self.min_interval_seconds - elapsed)
 
-        # Try arxiv first
-        results = self._search_arxiv(query)
-        source_note = ""
+        # Try Semantic Scholar first (better relevance ranking)
+        results = self._search_semantic_scholar(query)
+        source_note = " (via Semantic Scholar)"
 
-        # Fallback to Semantic Scholar if arxiv fails
+        # Fallback to arxiv if S2 fails
         if not results:
-            results = self._search_semantic_scholar(query)
-            source_note = " (via Semantic Scholar - arxiv unavailable)"
+            results = self._search_arxiv(query)
+            source_note = " (via arxiv - S2 unavailable)"
 
         ArxivSearchTool._searches_done += 1
 
