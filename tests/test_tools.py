@@ -85,7 +85,7 @@ class TestArxivSearchTool:
 
         # Third should be blocked
         result = tool._run("test query 3")
-        assert "Max searches" in result
+        assert "STOP SEARCHING" in result
 
 
 class TestAlphaxivTool:
