@@ -245,6 +245,17 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
     hypothesis = "See log for details"
     reasoning = "See log for details"
 
+    def clean_terminal_chars(text: str) -> str:
+        """Remove terminal UI box-drawing characters and clean up text."""
+        import re
+        # Remove box-drawing characters (│ ╭ ╮ ╯ ╰ ─ etc.)
+        text = re.sub(r"[│╭╮╯╰─╱╲┌┐└┘├┤┬┴┼]", "", text)
+        # Remove ANSI escape sequences
+        text = re.sub(r"\x1b\[[0-9;]*m", "", text)
+        # Clean up multiple spaces
+        text = re.sub(r"  +", " ", text)
+        return text.strip()
+
     try:
         content = log_file.read_text(encoding="utf-8")
         # Look for the last PROPOSAL/REASONING pair (most recent iteration)
@@ -254,15 +265,15 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
             if "PROPOSAL:" in line:
                 # Extract everything after PROPOSAL:
                 proposal_start = line.find("PROPOSAL:") + len("PROPOSAL:")
-                hypothesis = line[proposal_start:].strip()
+                hypothesis = clean_terminal_chars(line[proposal_start:])
                 # If hypothesis continues on next lines, grab them
                 if not hypothesis and i + 1 < len(lines):
-                    hypothesis = lines[i + 1].strip()
+                    hypothesis = clean_terminal_chars(lines[i + 1])
             elif "REASONING:" in line:
                 reasoning_start = line.find("REASONING:") + len("REASONING:")
-                reasoning = line[reasoning_start:].strip()
+                reasoning = clean_terminal_chars(line[reasoning_start:])
                 if not reasoning and i + 1 < len(lines):
-                    reasoning = lines[i + 1].strip()
+                    reasoning = clean_terminal_chars(lines[i + 1])
 
         # Truncate if too long
         if len(hypothesis) > 200:
