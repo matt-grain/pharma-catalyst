@@ -245,15 +245,27 @@ class ArxivSearchTool(BaseTool):
             return f"No papers found for query: {query}"
 
         formatted = []
+        arxiv_count = 0
         for r in results:
             abstract = r["abstract"] + "..." if r["abstract"] else ""
+            source_tag = ""
+            if r.get("source") == "s2":
+                # S2-only paper - can't fetch from alphaxiv, use search abstract directly
+                source_tag = " [S2-ONLY: store directly, don't fetch]"
+            else:
+                arxiv_count += 1
             formatted.append(
-                f"- **{r['id']}** ({r['date']}): {r['title']}\n  {abstract}\n"
+                f"- **{r['id']}** ({r['date']}){source_tag}: {r['title']}\n  {abstract}\n"
             )
+
+        fetch_note = ""
+        if arxiv_count < len(results):
+            fetch_note = f"\n\nNote: {len(results) - arxiv_count} papers are S2-only (no arxiv ID). Store them directly using the abstract above instead of fetching."
 
         return (
             f"Found {len(results)} papers for '{query}'{source_note}:\n\n"
             + "\n".join(formatted)
+            + fetch_note
         )
 
 

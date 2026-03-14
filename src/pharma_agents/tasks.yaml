@@ -5,11 +5,16 @@ archivist_task:
     Your goal: Build a searchable knowledge base of techniques from recent papers (last 2 years).
 
     Steps:
-    1. Search arxiv for papers on "{property} prediction machine learning" (use search_arxiv tool)
+    1. Search for papers on "{property} prediction machine learning" (use search_arxiv tool)
     2. Search for related terms: "molecular property prediction", "ADMET", "cheminformatics ML"
-    3. For the top 5-8 most relevant papers, fetch their summaries (use fetch_arxiv_paper tool)
-    4. Extract key methods and techniques from each paper
+    3. For papers WITH arxiv IDs (format like 2401.12345): fetch summaries using fetch_arxiv_paper
+    4. For papers marked [S2-ONLY]: store directly using the abstract from search results
     5. Store each paper with its summary and key methods (use store_paper tool)
+
+    IMPORTANT: Some papers come from Semantic Scholar and don't have arxiv IDs.
+    These are marked [S2-ONLY] in search results. For these papers:
+    - Do NOT try to fetch them (fetch_arxiv_paper will fail)
+    - Store them directly using the abstract from the search results
 
     Constraints:
     - Focus on papers from 2023-2025 (recent advances)
