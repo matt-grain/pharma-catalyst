@@ -51,7 +51,6 @@ class AlphaxivTool(BaseTool):
     min_interval_seconds: float = 1.0
     timeout_seconds: float = 10.0
     max_retries: int = 2
-    pdf_pages_to_extract: int = 8  # First N pages (abstract + methods usually)
     _papers_fetched: ClassVar[int] = 0
     _last_fetch: ClassVar[float] = 0.0
 
@@ -74,37 +73,28 @@ class AlphaxivTool(BaseTool):
                     time.sleep(1)
         return None
 
-    def _extract_from_pdf(self, paper_id: str) -> str | None:
-        """Download PDF from arxiv and extract key sections."""
-        import tempfile
+    def _fetch_arxiv_abstract_page(self, paper_id: str) -> str | None:
+        """Fetch arxiv abstract page via markdown.new for clean extraction."""
         import urllib.request
+        import urllib.error
+
+        # Use markdown.new to get clean markdown from arxiv abstract page
+        url = f"https://markdown.new/https://arxiv.org/abs/{paper_id}"
 
         try:
-            import pymupdf4llm
-        except ImportError:
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", "pharma-agents/0.1")
+            with urllib.request.urlopen(req, timeout=15) as response:
+                content = response.read().decode("utf-8")
+
+            # Extract key sections from the markdown
+            if not content or len(content) < 100:
+                return None
+
+            return content
+
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception):
             return None
-
-        pdf_url = f"https://arxiv.org/pdf/{paper_id}"
-        pdf_path = Path(tempfile.gettempdir()) / f"arxiv_{paper_id.replace('/', '_')}.pdf"
-
-        try:
-            # Download PDF if not cached
-            if not pdf_path.exists():
-                urllib.request.urlretrieve(pdf_url, pdf_path)
-
-            # Extract markdown from first N pages
-            md = pymupdf4llm.to_markdown(
-                str(pdf_path), pages=list(range(self.pdf_pages_to_extract))
-            )
-
-            # Truncate if too long
-            if len(md) > 20000:
-                md = md[:20000] + "\n\n[... truncated, see full paper ...]"
-
-            return md
-
-        except Exception as e:
-            return f"PDF extraction failed: {e}"
 
     def _run(self, paper_id: str) -> str:
         """Fetch paper - alphaxiv first, then PDF fallback."""
@@ -148,31 +138,31 @@ class AlphaxivTool(BaseTool):
                 content = content[:15000] + "\n\n[... truncated ...]"
             return f"=== Paper {paper_id} (alphaxiv full) ===\n\n{content}"
 
-        # Fallback: download PDF and extract with pymupdf4llm
-        content = self._extract_from_pdf(paper_id)
-        if content and not content.startswith("PDF extraction failed"):
+        # Fallback: fetch arxiv abstract page via markdown.new
+        content = self._fetch_arxiv_abstract_page(paper_id)
+        if content:
             AlphaxivTool._papers_fetched += 1
-            return f"=== Paper {paper_id} (arxiv PDF) ===\n\n{content}"
+            return f"=== Paper {paper_id} (arxiv abstract) ===\n\n{content}"
 
-        return f"Paper {paper_id} not available. Error: {content or 'unknown'}"
+        return f"Paper {paper_id} not available via alphaxiv or arxiv."
 
 
 class ArxivSearchTool(BaseTool):
-    """Tool to search arxiv for recent papers with Semantic Scholar fallback."""
+    """Tool to search arxiv for recent papers."""
 
     name: str = "search_arxiv"
     description: str = (
-        "Searches for recent papers on a topic (tries arxiv, falls back to Semantic Scholar). "
+        "Searches arxiv for recent papers on a topic. "
         "Input: search query (e.g., 'ADMET prediction graph neural network'). "
-        "Returns list of paper IDs with titles and abstracts. "
-        "Use this to find relevant papers, then fetch_arxiv_paper for details."
+        "Returns list of arxiv paper IDs with titles and abstracts. "
+        "Use this to find papers, then fetch_arxiv_paper for full details."
     )
     cache_function: None = None
 
     max_results: int = 10
-    max_searches_per_run: int = 8  # Increased from 5
+    max_searches_per_run: int = 8
     min_interval_seconds: float = 3.0  # arxiv recommends 3s between requests
-    max_retries: int = 2  # Reduced for faster fallback
+    max_retries: int = 2
     _searches_done: ClassVar[int] = 0
     _last_search: ClassVar[float] = 0.0
 
@@ -234,47 +224,8 @@ class ArxivSearchTool(BaseTool):
                 return None
         return None
 
-    def _search_semantic_scholar(self, query: str) -> list[dict] | None:
-        """Fallback to Semantic Scholar API."""
-        import urllib.request
-        import urllib.parse
-
-        encoded_query = urllib.parse.quote(query)
-        url = (
-            f"https://api.semanticscholar.org/graph/v1/paper/search?"
-            f"query={encoded_query}&limit={self.max_results}"
-            f"&fields=paperId,externalIds,title,abstract,year"
-        )
-
-        try:
-            req = urllib.request.Request(url)
-            req.add_header("User-Agent", "pharma-agents/0.1")
-            with urllib.request.urlopen(req, timeout=15) as response:
-                data = json.loads(response.read().decode("utf-8"))
-
-            results = []
-            for paper in data.get("data", []):
-                # Prefer arxiv ID if available
-                external_ids = paper.get("externalIds", {})
-                arxiv_id = external_ids.get("ArXiv", "")
-                paper_id = arxiv_id if arxiv_id else paper.get("paperId", "")[:12]
-
-                results.append(
-                    {
-                        "id": paper_id,
-                        "title": paper.get("title", ""),
-                        "abstract": (paper.get("abstract") or "")[:300],
-                        "date": str(paper.get("year", "")),
-                        "source": "s2" if not arxiv_id else "arxiv",
-                    }
-                )
-            return results if results else None
-
-        except Exception:
-            return None
-
     def _run(self, query: str) -> str:
-        """Search for papers with arxiv + Semantic Scholar fallback."""
+        """Search arxiv for papers."""
         if ArxivSearchTool._searches_done >= self.max_searches_per_run:
             return (
                 f"STOP SEARCHING. You have already done {self.max_searches_per_run} searches. "
@@ -287,43 +238,20 @@ class ArxivSearchTool(BaseTool):
         if elapsed < self.min_interval_seconds:
             time.sleep(self.min_interval_seconds - elapsed)
 
-        # Try Semantic Scholar first (better relevance ranking)
-        results = self._search_semantic_scholar(query)
-        source_note = " (via Semantic Scholar)"
-
-        # Fallback to arxiv if S2 fails
-        if not results:
-            results = self._search_arxiv(query)
-            source_note = " (via arxiv - S2 unavailable)"
-
+        results = self._search_arxiv(query)
         ArxivSearchTool._searches_done += 1
 
         if not results:
             return f"No papers found for query: {query}"
 
         formatted = []
-        arxiv_count = 0
         for r in results:
             abstract = r["abstract"] + "..." if r["abstract"] else ""
-            source_tag = ""
-            if r.get("source") == "s2":
-                # S2-only paper - can't fetch from alphaxiv, use search abstract directly
-                source_tag = " [S2-ONLY: store directly, don't fetch]"
-            else:
-                arxiv_count += 1
             formatted.append(
-                f"- **{r['id']}** ({r['date']}){source_tag}: {r['title']}\n  {abstract}\n"
+                f"- **{r['id']}** ({r['date']}): {r['title']}\n  {abstract}\n"
             )
 
-        fetch_note = ""
-        if arxiv_count < len(results):
-            fetch_note = f"\n\nNote: {len(results) - arxiv_count} papers are S2-only (no arxiv ID). Store them directly using the abstract above instead of fetching."
-
-        return (
-            f"Found {len(results)} papers for '{query}'{source_note}:\n\n"
-            + "\n".join(formatted)
-            + fetch_note
-        )
+        return f"Found {len(results)} papers for '{query}':\n\n" + "\n".join(formatted)
 
 
 class LiteratureStoreTool(BaseTool):
