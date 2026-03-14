@@ -1,8 +1,33 @@
 """Training script manipulation tools."""
 
+from typing import ClassVar
+
 from crewai.tools import BaseTool
 
 from pharma_agents.memory import get_experiments_dir, get_metric_name
+
+# Allowed packages for InstallPackageTool (ML/data science packages only)
+ALLOWED_PACKAGES = {
+    "lightgbm",
+    "xgboost",
+    "catboost",
+    "scikit-learn",
+    "sklearn",
+    "pandas",
+    "numpy",
+    "scipy",
+    "rdkit",
+    "deepchem",
+    "torch",
+    "pytorch",
+    "tensorflow",
+    "keras",
+    "molfeat",
+    "descriptastorus",
+    "mordred",
+    "pubchempy",
+    "chembl-webresource-client",
+}
 
 
 class ReadTrainPyTool(BaseTool):
@@ -119,5 +144,60 @@ class RunTrainPyTool(BaseTool):
                 return f"Error: {result.stderr}"
         except subprocess.TimeoutExpired:
             return "Error: Training timed out (>60s)"
+        except Exception as e:
+            return f"Error: {e}"
+
+
+class InstallPackageTool(BaseTool):
+    """Tool to install Python packages via uv."""
+
+    name: str = "install_package"
+    description: str = (
+        "Installs a Python package using uv. "
+        "Input: package name (e.g., 'lightgbm', 'xgboost'). "
+        "Only ML/data science packages are allowed. "
+        "Use this when you need a package that's not installed."
+    )
+    cache_function: None = None
+
+    _packages_installed: ClassVar[list[str]] = []
+    max_installs_per_run: int = 3
+
+    def _run(self, package: str) -> str:
+        """Install a package via uv add."""
+        import subprocess
+
+        package = package.strip().lower()
+
+        # Safety check - only allow whitelisted packages
+        if package not in ALLOWED_PACKAGES:
+            return (
+                f"Error: '{package}' is not in the allowed list. "
+                f"Allowed packages: {', '.join(sorted(ALLOWED_PACKAGES))}"
+            )
+
+        # Limit installs per run
+        if len(InstallPackageTool._packages_installed) >= self.max_installs_per_run:
+            return f"Error: Max installs ({self.max_installs_per_run}) reached this run."
+
+        # Check if already installed this run
+        if package in InstallPackageTool._packages_installed:
+            return f"Package '{package}' was already installed this run."
+
+        try:
+            result = subprocess.run(
+                ["uv", "add", package],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if result.returncode == 0:
+                InstallPackageTool._packages_installed.append(package)
+                return f"Successfully installed '{package}'. You can now import it."
+            else:
+                error = result.stderr.strip() or result.stdout.strip()
+                return f"Error installing '{package}': {error}"
+        except subprocess.TimeoutExpired:
+            return f"Error: Installation of '{package}' timed out (>120s)"
         except Exception as e:
             return f"Error: {e}"

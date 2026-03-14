@@ -17,6 +17,7 @@ from .tools import (
     ArxivSearchTool,
     CodeCheckTool,
     FetchMorePapersTool,
+    InstallPackageTool,
     LiteratureQueryTool,
     LiteratureStoreTool,
     ReadTrainPyTool,
@@ -119,6 +120,7 @@ class PharmaAgentsCrew:
                 ReadTrainPyTool(),
                 WriteTrainPyTool(),
                 CodeCheckTool(),
+                InstallPackageTool(),
             ],
             max_iter=40,  # Allow more iterations for code fix cycles
             verbose=True,

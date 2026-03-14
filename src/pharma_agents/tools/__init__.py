@@ -8,7 +8,13 @@ from .literature import (
     get_literature_dir,
 )
 from .skills import SkillLoaderTool
-from .training import CodeCheckTool, ReadTrainPyTool, RunTrainPyTool, WriteTrainPyTool
+from .training import (
+    CodeCheckTool,
+    InstallPackageTool,
+    ReadTrainPyTool,
+    RunTrainPyTool,
+    WriteTrainPyTool,
+)
 
 __all__ = [
     # Arxiv tools
@@ -24,6 +30,7 @@ __all__ = [
     "WriteTrainPyTool",
     "CodeCheckTool",
     "RunTrainPyTool",
+    "InstallPackageTool",
     # Skills
     "SkillLoaderTool",
 ]
