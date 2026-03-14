@@ -139,9 +139,10 @@ class PharmaAgentsCrew:
 
     @task
     def archivist_task(self) -> Task:
-        """Task: Gather recent research papers."""
+        """Task: Gather recent research papers (runs async in parallel)."""
         return Task(
             config=self.tasks_config["archivist_task"],  # type: ignore[index,call-arg]
+            async_execution=True,  # Run in parallel with other tasks
         )
 
     @task
@@ -168,7 +169,7 @@ class PharmaAgentsCrew:
 
     @crew
     def crew(self) -> Crew:
-        """Create the pharma-agents crew (without archivist - use research_crew for that)."""
+        """Create the pharma-agents crew (without archivist)."""
         return Crew(
             agents=[
                 self.hypothesis_agent(),
@@ -184,14 +185,26 @@ class PharmaAgentsCrew:
             verbose=True,
         )
 
-    def research_crew(self) -> Crew:
-        """Create a research-only crew (archivist only) for literature gathering.
+    def crew_with_archivist(self) -> Crew:
+        """Create crew with archivist running async in parallel.
 
-        Note: Not using @crew decorator - this is a standalone crew for literature research.
+        The archivist_task has async_execution=True, so it runs in background
+        while hypothesis_task starts immediately. Literature will be ready
+        for subsequent runs.
         """
         return Crew(
-            agents=[self.archivist_agent()],
-            tasks=[self.archivist_task()],
+            agents=[
+                self.archivist_agent(),
+                self.hypothesis_agent(),
+                self.model_agent(),
+                self.evaluator_agent(),
+            ],
+            tasks=[
+                self.archivist_task(),  # async - runs in parallel
+                self.hypothesis_task(),
+                self.implement_task(),
+                self.evaluate_task(),
+            ],
             process=Process.sequential,
             verbose=True,
         )

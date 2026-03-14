@@ -381,27 +381,15 @@ def run(iterations: int = 10) -> None:
         else None
     )
 
-    if run_archivist and archivist_reason:
+    # Decide which crew to use for first iteration
+    # Archivist runs async in parallel on first iteration when needed
+    use_archivist_first_iter = run_archivist and archivist_reason is not None
+
+    if use_archivist_first_iter:
         logger.info("=" * 60)
-        logger.info(f"ARCHIVIST: {archivist_reason}")
+        logger.info(f"ARCHIVIST (async): {archivist_reason}")
         logger.info("=" * 60)
-        print(f"\n[ARCHIVIST] {archivist_reason}...")
-
-        from .memory import get_baseline_config
-
-        config = get_baseline_config()
-        archivist_inputs = {
-            "property": config.get("property", "molecular property"),
-        }
-
-        try:
-            with capture_stdout_to_log(log_file):
-                crew.research_crew().kickoff(inputs=archivist_inputs)
-            logger.info("Archivist completed - literature database updated")
-            print("[ARCHIVIST] Done! Literature database updated.\n")
-        except Exception as e:
-            logger.warning(f"Archivist failed (non-fatal): {e}")
-            print(f"[ARCHIVIST] Warning: {e} - continuing without fresh literature\n")
+        print(f"[ARCHIVIST] Will run async in first iteration ({archivist_reason})...")
     else:
         logger.info(
             "Literature database exists and not in exploration mode - skipping Archivist"
@@ -434,10 +422,17 @@ def run(iterations: int = 10) -> None:
         }
 
         # Run the crew (capture stdout to log file)
+        # First iteration: use crew_with_archivist if needed (archivist runs async)
+        # Subsequent iterations: use regular crew
         try:
-            logger.info("Running agent crew...")
-            with capture_stdout_to_log(log_file):
-                result = crew.crew().kickoff(inputs=inputs)
+            if i == 0 and use_archivist_first_iter:
+                logger.info("Running crew with async archivist...")
+                with capture_stdout_to_log(log_file):
+                    result = crew.crew_with_archivist().kickoff(inputs=inputs)
+            else:
+                logger.info("Running agent crew...")
+                with capture_stdout_to_log(log_file):
+                    result = crew.crew().kickoff(inputs=inputs)
             logger.info("Crew completed")
             logger.debug(f"Crew output: {result}")
         except Exception as e:
