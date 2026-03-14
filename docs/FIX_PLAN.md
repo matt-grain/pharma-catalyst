@@ -357,11 +357,11 @@ After implementing each task:
 
 | Task | Priority | Complexity | Status |
 |------|----------|------------|--------|
-| 1.1 Tests for memory.py | Major | Medium | TODO |
-| 1.2 Tests for evaluate.py | Major | Medium | TODO |
-| 2.1 Constants in main.py | Minor | Easy | TODO |
-| 2.2 Constants in literature.py | Minor | Easy | TODO |
-| 3.1 Pydantic output types | Medium | Medium | TODO |
-| 3.2 Per-agent temperature | Medium | Easy | TODO |
+| 1.1 Tests for memory.py | Major | Medium | ✅ Done (commit 4279680) |
+| 1.2 Tests for evaluate.py | Major | Medium | ✅ Done (commit 4279680) |
+| 2.1 Constants in main.py | Minor | Easy | ✅ Done (commit 4279680) |
+| 2.2 Constants in literature.py | Minor | Easy | ✅ Done (commit 4279680) |
+| 3.1 Pydantic output types | Medium | Medium | ✅ Done (commit 4279680) |
+| 3.2 Per-agent temperature | Medium | Easy | ✅ Done (commit 4279680) |
 
-Start with Priority 1 (tests), then Priority 2 (constants), then Priority 3 (CrewAI improvements).
+**All tasks completed by Sonnet agents, reviewed and validated by Opus.**

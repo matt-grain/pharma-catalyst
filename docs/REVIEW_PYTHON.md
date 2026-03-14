@@ -305,8 +305,8 @@ class TestAgentMemory:
 2. ✅ **Critical:** Add file handle cleanup to `TeeStream` — DONE
 3. ✅ **Major:** Fix mutable default in `SkillLoaderTool._skills_loaded` — DONE
 4. ✅ **Major:** Fix `lines.index()` bug in `FetchMorePapersTool` — DONE
-5. **Major:** Add unit tests for `memory.py` and `evaluate.py`
-6. **Minor:** Extract magic numbers to named constants
+5. ✅ **Major:** Add unit tests for `memory.py` and `evaluate.py` — DONE
+6. ✅ **Minor:** Extract magic numbers to named constants — DONE
 7. **Minor:** Standardize docstring format
 
 ---

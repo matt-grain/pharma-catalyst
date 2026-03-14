@@ -478,8 +478,8 @@ def _extract_from_markdown(self, content: str) -> PaperInfo | None:
 | Anti-Pattern | Location | Impact | Status |
 |--------------|----------|--------|--------|
 | Regex parsing of agent output | main.py:239 | Fragile, breaks on format changes | Open |
-| Missing output types | tasks.yaml | No structured validation | Open |
-| Hardcoded temperature | crew.py:64 | Suboptimal for different agent roles | Open |
+| Missing output types | tasks.yaml | No structured validation | ✅ Fixed |
+| Hardcoded temperature | crew.py:64 | Suboptimal for different agent roles | ✅ Fixed |
 | Missing task context chain | crew.py:166 | Evaluator lacks change context | ✅ Fixed |
 | Model reloading per call | literature.py:238 | Performance overhead | ✅ Fixed |
 
