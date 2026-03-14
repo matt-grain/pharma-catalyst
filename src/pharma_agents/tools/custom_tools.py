@@ -8,7 +8,12 @@ from typing import ClassVar
 
 from crewai.tools import BaseTool
 
-from pharma_agents.memory import get_experiments_dir, get_metric_name
+from pharma_agents.memory import (
+    get_experiments_dir,
+    get_experiments_root,
+    get_experiment_name,
+    get_metric_name,
+)
 
 
 # Skills directory relative to project root
@@ -21,8 +26,12 @@ SKILLS_DIR = Path(__file__).parent.parent.parent.parent / ".claude" / "skills"
 
 
 def get_literature_dir() -> Path:
-    """Get the literature directory for the current experiment."""
-    return get_experiments_dir() / "literature"
+    """Get the literature directory for the current experiment.
+
+    Always uses the MAIN experiments dir (not worktree) so literature
+    persists across runs.
+    """
+    return get_experiments_root() / get_experiment_name() / "literature"
 
 
 class AlphaxivTool(BaseTool):

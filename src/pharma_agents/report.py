@@ -45,12 +45,21 @@ def generate_run_report(
 
     for exp in experiments:
         iterations.append(exp["iteration"])
-        scores.append(exp.get("score_after") or baseline_score)
-        results.append(exp["result"])
+        # Support both old (score_after) and new (rmse) field names
+        score = exp.get("score_after") or exp.get("rmse") or baseline_score
+        scores.append(score)
+        # Support both old (result) and new (success) field names
+        if "result" in exp:
+            results.append(exp["result"])
+        else:
+            results.append("success" if exp.get("success") else "failure")
         hypotheses.append(exp.get("hypothesis", "")[:50] + "...")
 
     # Calculate final stats
-    successful_exps = [e for e in experiments if e["result"] == "success"]
+    successful_exps = [
+        e for e in experiments
+        if e.get("result") == "success" or e.get("success") is True
+    ]
     final_score = scores[-1] if scores else baseline_score
     total_improvement = (
         ((final_score - baseline_score) / baseline_score) * 100
