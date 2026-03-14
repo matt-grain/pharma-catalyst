@@ -139,7 +139,7 @@ class ArxivSearchTool(BaseTool):
         url = (
             f"http://export.arxiv.org/api/query?"
             f"search_query={search_query}&start=0&max_results={self.max_results}"
-            f"&sortBy=submittedDate&sortOrder=descending"
+            f"&sortBy=relevance&sortOrder=descending"
         )
 
         for attempt in range(self.max_retries):
