@@ -317,8 +317,8 @@ class TestSkillLoaderTool:
         """Load a skill that exists."""
         from pharma_agents.tools.custom_tools import SkillLoaderTool
 
+        SkillLoaderTool._skills_loaded = []  # Reset class-level state
         tool = SkillLoaderTool()
-        tool._skills_loaded = []  # Reset
 
         result = tool._run("rdkit")
 
@@ -328,10 +328,11 @@ class TestSkillLoaderTool:
         """Try to load a skill that doesn't exist."""
         from pharma_agents.tools.custom_tools import SkillLoaderTool
 
+        SkillLoaderTool._skills_loaded = []  # Reset class-level state
         tool = SkillLoaderTool()
-        tool._skills_loaded = []
 
-        result = tool._run("nonexistent_skill_xyz")
+        # Use valid format (alphanumeric + hyphens only)
+        result = tool._run("nonexistent-skill-xyz")
 
         assert "not found" in result.lower()
         assert "Available:" in result
@@ -340,8 +341,8 @@ class TestSkillLoaderTool:
         """Verify max_skills_per_run limit."""
         from pharma_agents.tools.custom_tools import SkillLoaderTool
 
+        SkillLoaderTool._skills_loaded = []  # Reset class-level state
         tool = SkillLoaderTool()
-        tool._skills_loaded = []
         tool.max_skills_per_run = 2
 
         # Load two skills
@@ -351,6 +352,18 @@ class TestSkillLoaderTool:
         # Third should be blocked
         result = tool._run("molfeat")
         assert "Max skills limit" in result
+
+    def test_path_traversal_blocked(self):
+        """Verify path traversal attempts are rejected."""
+        from pharma_agents.tools.custom_tools import SkillLoaderTool
+
+        SkillLoaderTool._skills_loaded = []
+        tool = SkillLoaderTool()
+
+        # Try path traversal patterns
+        for malicious in ["../../../etc/passwd", "..\\..\\secrets", "skill/../bad"]:
+            result = tool._run(malicious)
+            assert "Invalid skill name" in result
 
 
 class TestEndToEndWorkflow:

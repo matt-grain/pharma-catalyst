@@ -214,13 +214,24 @@ class LiteratureQueryTool(BaseTool):
 
     top_k: int = 5
 
+    # Cache embedding model to avoid reloading on every query
+    _model: ClassVar = None
+
+    @classmethod
+    def _get_model(cls):
+        """Get or create cached embedding model."""
+        if cls._model is None:
+            from fastembed import TextEmbedding
+
+            cls._model = TextEmbedding("BAAI/bge-small-en-v1.5")
+        return cls._model
+
     def _run(self, query: str) -> str:
         """Query literature DB."""
         try:
-            from fastembed import TextEmbedding
             import numpy as np
         except ImportError:
-            return "Error: fastembed not installed."
+            return "Error: numpy not installed."
 
         lit_dir = get_literature_dir()
         index_path = lit_dir / "index.json"
@@ -234,8 +245,11 @@ class LiteratureQueryTool(BaseTool):
         if not papers:
             return "Literature database is empty."
 
-        # Create query embedding
-        model = TextEmbedding("BAAI/bge-small-en-v1.5")
+        # Create query embedding (uses cached model)
+        try:
+            model = self._get_model()
+        except ImportError:
+            return "Error: fastembed not installed."
         query_emb = list(model.embed([query]))[0]
 
         # Calculate similarities
@@ -320,12 +334,11 @@ class FetchMorePapersTool(BaseTool):
             title = paper_id  # Default
             summary = ""
 
-            for line in lines:
+            for idx, line in enumerate(lines):
                 if line.startswith("# "):
                     title = line[2:].strip()
                 elif line.startswith("## Summary") or line.startswith("## Abstract"):
                     # Get next few lines as summary
-                    idx = lines.index(line)
                     summary = " ".join(lines[idx + 1 : idx + 5]).strip()
                     break
 

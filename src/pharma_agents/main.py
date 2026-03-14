@@ -54,6 +54,11 @@ class TeeStream:
         self._closed = True
         self.log_file.close()
 
+    def __del__(self):
+        """Cleanup file handle on garbage collection."""
+        if not self._closed:
+            self.close()
+
 
 @contextmanager
 def capture_stdout_to_log(log_file: Path):

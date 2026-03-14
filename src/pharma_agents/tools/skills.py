@@ -1,6 +1,8 @@
 """Scientific skill loading tool."""
 
+import re
 from pathlib import Path
+from typing import ClassVar
 
 from crewai.tools import BaseTool
 
@@ -22,11 +24,15 @@ class SkillLoaderTool(BaseTool):
 
     # Constraints
     max_skills_per_run: int = 3
-    _skills_loaded: list = []
+    _skills_loaded: ClassVar[list[str]] = []  # Shared across instances
 
     def _run(self, skill_name: str) -> str:
         """Load a skill by name."""
         skill_name = skill_name.strip().lower()
+
+        # Sanitize: only allow alphanumeric and hyphens (prevent path traversal)
+        if not re.match(r"^[a-z0-9-]+$", skill_name):
+            return f"Error: Invalid skill name '{skill_name}'. Use only lowercase letters, numbers, and hyphens."
 
         # Check limit
         if len(self._skills_loaded) >= self.max_skills_per_run:

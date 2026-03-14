@@ -164,9 +164,12 @@ class PharmaAgentsCrew:
 
     @task
     def evaluate_task(self) -> Task:
-        """Task: Run and evaluate the change (no context - just run and compare)."""
+        """Task: Run and evaluate the change."""
         return Task(
             config=self.tasks_config["evaluate_task"],
+            context=[
+                self.implement_task()
+            ],  # Know what was changed  # type: ignore[list-item]
         )
 
     @crew
