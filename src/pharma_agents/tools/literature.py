@@ -168,11 +168,14 @@ class LiteratureStoreTool(BaseTool):
         papers_dir.mkdir(exist_ok=True)
         safe_id = paper_id.replace("/", "_").replace(":", "_")
 
-        # Save full content if available
+        # Save full content only if it's real full content (not arxiv abstract fallback)
         has_full = False
         if full_content and len(full_content) > 200:
-            (papers_dir / f"{safe_id}_full.md").write_text(full_content)
-            has_full = True
+            # Skip noisy arxiv abstract fallback - only save alphaxiv full content
+            is_arxiv_abstract = "(arxiv abstract)" in full_content[:100]
+            if not is_arxiv_abstract:
+                (papers_dir / f"{safe_id}_full.md").write_text(full_content)
+                has_full = True
 
         # Build summary markdown with links
         full_link = f"**Full Content:** [{safe_id}_full.md]({safe_id}_full.md)\n" if has_full else ""
