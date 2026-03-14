@@ -90,7 +90,7 @@ class PharmaAgentsCrew:
                 AlphaxivTool(),
                 LiteratureStoreTool(),
             ],
-            max_iter=30,  # Allow more iterations for research
+            max_iter=20,  # Reduced - archivist is best-effort, don't loop too long
             verbose=True,
         )
 
