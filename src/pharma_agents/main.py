@@ -365,6 +365,35 @@ def run(iterations: int = 10) -> None:
     # Initialize crew
     crew = PharmaAgentsCrew()
 
+    # Check if we need to run the Archivist (literature research)
+    literature_dir = experiments_dir / "literature"
+    literature_index = literature_dir / "index.json"
+    run_archivist = not literature_index.exists()
+
+    if run_archivist:
+        logger.info("=" * 60)
+        logger.info("ARCHIVIST: Gathering recent literature...")
+        logger.info("=" * 60)
+        print("\n[ARCHIVIST] No literature database found. Gathering recent papers...")
+
+        from .memory import get_baseline_config
+
+        config = get_baseline_config()
+        archivist_inputs = {
+            "property": config.get("property", "molecular property"),
+        }
+
+        try:
+            with capture_stdout_to_log(log_file):
+                crew.research_crew().kickoff(inputs=archivist_inputs)
+            logger.info("Archivist completed - literature database created")
+            print("[ARCHIVIST] Done! Literature database created.\n")
+        except Exception as e:
+            logger.warning(f"Archivist failed (non-fatal): {e}")
+            print(f"[ARCHIVIST] Warning: {e} - continuing without literature\n")
+    else:
+        logger.info("Literature database exists - skipping Archivist")
+
     # Track experiment history for context
     experiment_history: list[dict] = []
 

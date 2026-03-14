@@ -1,3 +1,31 @@
+archivist_task:
+  description: >
+    You are a Literature Archivist gathering recent research on {property} prediction.
+
+    Your goal: Build a searchable knowledge base of techniques from recent papers (last 2 years).
+
+    Steps:
+    1. Search arxiv for papers on "{property} prediction machine learning" (use search_arxiv tool)
+    2. Search for related terms: "molecular property prediction", "ADMET", "cheminformatics ML"
+    3. For the top 5-8 most relevant papers, fetch their summaries (use fetch_arxiv_paper tool)
+    4. Extract key methods and techniques from each paper
+    5. Store each paper with its summary and key methods (use store_paper tool)
+
+    Constraints:
+    - Focus on papers from 2023-2025 (recent advances)
+    - Prioritize papers with novel methods, not just applications
+    - Extract ACTIONABLE techniques (e.g., "use attention pooling", "combine fingerprints with descriptors")
+
+    Output format:
+    PAPERS INDEXED: [count]
+    KEY TECHNIQUES FOUND:
+    - [technique 1 from paper X]
+    - [technique 2 from paper Y]
+    ...
+  expected_output: >
+    Summary of papers indexed with list of key techniques discovered
+  agent: archivist_agent
+
 hypothesis_task:
   description: >
     You are a Research Scientist proposing improvements for {property} prediction.
@@ -8,17 +36,22 @@ hypothesis_task:
 
     This run's experiments: {experiment_history}
 
-    Based on the memory above, propose ONE specific change that:
+    FIRST: Query the literature database for recent techniques (use query_literature tool)
+    with queries like "gradient boosting features" or "attention mechanism molecular".
+
+    Based on the memory AND literature insights, propose ONE specific change that:
     1. Is DIFFERENT from what failed before (check "What Failed" section!)
     2. Builds on what worked (check "What Worked" section)
-    3. Is specific and implementable in train.py
+    3. Is informed by recent research (check literature query results)
+    4. Is specific and implementable in train.py
 
     Output format:
+    LITERATURE INSIGHT: [what the recent papers suggest]
     PROPOSAL: [one-line description of the change]
     REASONING: [WHY this approach - what scientific/ML principle supports it]
     CHANGE: [specific code modification needed]
   expected_output: >
-    A specific, implementable proposal with clear reasoning
+    A specific, implementable proposal with clear reasoning informed by recent literature
   agent: hypothesis_agent
 
 implement_task:

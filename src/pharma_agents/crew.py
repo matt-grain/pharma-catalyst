@@ -17,6 +17,11 @@ from .tools.custom_tools import (
     WriteTrainPyTool,
     RunTrainPyTool,
     CodeCheckTool,
+    AlphaxivTool,
+    ArxivSearchTool,
+    LiteratureStoreTool,
+    LiteratureQueryTool,
+    SkillLoaderTool,
 )
 
 
@@ -74,6 +79,21 @@ class PharmaAgentsCrew:
     tasks_config = "tasks.yaml"
 
     @agent
+    def archivist_agent(self) -> Agent:
+        """Literature Archivist who gathers recent research."""
+        return Agent(
+            config=self.agents_config["archivist_agent"],  # type: ignore[index]
+            llm=get_llm(),
+            tools=[
+                ArxivSearchTool(),
+                AlphaxivTool(),
+                LiteratureStoreTool(),
+            ],
+            max_iter=30,  # Allow more iterations for research
+            verbose=True,
+        )
+
+    @agent
     def hypothesis_agent(self) -> Agent:
         """Research Scientist who proposes improvements."""
         return Agent(
@@ -81,6 +101,8 @@ class PharmaAgentsCrew:
             llm=get_llm(),
             tools=[
                 ReadTrainPyTool(),
+                LiteratureQueryTool(),
+                SkillLoaderTool(),
             ],
             verbose=True,
         )
@@ -114,6 +136,13 @@ class PharmaAgentsCrew:
         )
 
     @task
+    def archivist_task(self) -> Task:
+        """Task: Gather recent research papers."""
+        return Task(
+            config=self.tasks_config["archivist_task"],  # type: ignore[index,call-arg]
+        )
+
+    @task
     def hypothesis_task(self) -> Task:
         """Task: Propose an improvement."""
         return Task(
@@ -137,10 +166,30 @@ class PharmaAgentsCrew:
 
     @crew
     def crew(self) -> Crew:
-        """Create the pharma-agents crew."""
+        """Create the pharma-agents crew (without archivist - use research_crew for that)."""
         return Crew(
-            agents=self.agents,  # type: ignore[attr-defined]
-            tasks=self.tasks,  # type: ignore[attr-defined]
+            agents=[
+                self.hypothesis_agent(),
+                self.model_agent(),
+                self.evaluator_agent(),
+            ],
+            tasks=[
+                self.hypothesis_task(),
+                self.implement_task(),
+                self.evaluate_task(),
+            ],
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def research_crew(self) -> Crew:
+        """Create a research-only crew (archivist only) for literature gathering.
+
+        Note: Not using @crew decorator - this is a standalone crew for literature research.
+        """
+        return Crew(
+            agents=[self.archivist_agent()],
+            tasks=[self.archivist_task()],
             process=Process.sequential,
             verbose=True,
         )
