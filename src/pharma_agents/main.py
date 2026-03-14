@@ -367,7 +367,8 @@ def run(iterations: int = 10) -> None:
 
     # Check if we need to run the Archivist (literature research)
     # Runs on: (1) first time (no literature exists), or (2) exploration mode (stuck)
-    literature_dir = experiments_dir / "literature"
+    # NOTE: Literature is stored in main repo, not worktree
+    literature_dir = main_experiments_dir / "literature"
     literature_index = literature_dir / "index.json"
     no_literature = not literature_index.exists()
     exploration_mode = memory.is_globally_stagnant() or memory.is_stuck(run_number)
