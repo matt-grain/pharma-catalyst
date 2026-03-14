@@ -156,7 +156,9 @@ class LiteratureStoreTool(BaseTool):
         papers_dir.mkdir(exist_ok=True)
         safe_id = paper_id.replace("/", "_").replace(":", "_")
         (papers_dir / f"{safe_id}.md").write_text(
-            f"# {title}\n\n**Paper ID:** {paper_id}\n\n## Summary\n\n{summary}\n\n"
+            f"# {title}\n\n**Paper ID:** {paper_id}\n"
+            f"**PDF:** https://arxiv.org/pdf/{paper_id}.pdf\n\n"
+            f"## Summary\n\n{summary}\n\n"
             f"## Key Methods\n\n" + "\n".join(f"- {m}" for m in key_methods)
         )
 
