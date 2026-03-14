@@ -49,8 +49,9 @@ This is a well-architected Python project demonstrating senior-level engineering
 
 ### CRITICAL
 
-#### 1. TeeStream file handle leak on exception
+#### 1. TeeStream file handle leak on exception ✅ FIXED
 **File:** `/src/pharma_agents/main.py`, lines 29-56
+**Status:** Fixed in commit `20509da` - Added `__del__` method for cleanup on garbage collection.
 
 The `TeeStream.__init__` opens a file but if an exception occurs before `close()` is called, the file handle leaks.
 
@@ -83,8 +84,9 @@ While there's a whitelist, the `uv add` command modifies `pyproject.toml` perman
 
 **Mitigation:** Consider using `uv pip install --prefix` to a temporary venv, or require human approval.
 
-#### 3. Path traversal in SkillLoaderTool
+#### 3. Path traversal in SkillLoaderTool ✅ FIXED
 **File:** `/src/pharma_agents/tools/skills.py`, lines 27-63
+**Status:** Fixed in commit `20509da` - Added regex validation to only allow `[a-z0-9-]+` characters.
 
 ```python
 skill_name = skill_name.strip().lower()
@@ -134,8 +136,9 @@ def promote(run_number: int) -> None:  # OK - but has bugs, see below
 
 **Issue:** The `promote()` function references `eval_result.metric` and `eval_result.score` but `ExperimentResult.metric` is a string and `.score` exists. However, it prints `eval_result.rmse` which is an alias - inconsistent.
 
-#### 5. Mutable class default in SkillLoaderTool
+#### 5. Mutable class default in SkillLoaderTool ✅ FIXED
 **File:** `/src/pharma_agents/tools/skills.py`, line 26
+**Status:** Fixed in commit `20509da` - Changed to `ClassVar[list[str]]`.
 
 ```python
 # BEFORE (bug - shared mutable default):
@@ -151,8 +154,9 @@ class SkillLoaderTool(BaseTool):
         self._skills_loaded = []
 ```
 
-#### 6. FetchMorePapersTool has fragile line parsing
+#### 6. FetchMorePapersTool has fragile line parsing ✅ FIXED
 **File:** `/src/pharma_agents/tools/literature.py`, lines 319-329
+**Status:** Fixed in commit `20509da` - Changed to use `enumerate()` instead of `lines.index()`.
 
 ```python
 for line in lines:
@@ -297,10 +301,10 @@ class TestAgentMemory:
 
 ## RECOMMENDED FIXES (Priority Order)
 
-1. **Critical:** Fix path traversal in `SkillLoaderTool`
-2. **Critical:** Add file handle cleanup to `TeeStream`
-3. **Major:** Fix mutable default in `SkillLoaderTool._skills_loaded`
-4. **Major:** Fix `lines.index()` bug in `FetchMorePapersTool`
+1. ✅ **Critical:** Fix path traversal in `SkillLoaderTool` — DONE
+2. ✅ **Critical:** Add file handle cleanup to `TeeStream` — DONE
+3. ✅ **Major:** Fix mutable default in `SkillLoaderTool._skills_loaded` — DONE
+4. ✅ **Major:** Fix `lines.index()` bug in `FetchMorePapersTool` — DONE
 5. **Major:** Add unit tests for `memory.py` and `evaluate.py`
 6. **Minor:** Extract magic numbers to named constants
 7. **Minor:** Standardize docstring format

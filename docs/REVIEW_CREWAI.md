@@ -56,7 +56,9 @@ This is a well-architected CrewAI application demonstrating senior-level underst
 
 ### Issues & Recommendations
 
-**Issue 1: Task Context Chain Incomplete**
+**Issue 1: Task Context Chain Incomplete** ✅ FIXED
+
+**Status:** Fixed in commit `20509da` - Added `context=[self.implement_task()]` to evaluate_task.
 
 ```python
 @task
@@ -391,7 +393,9 @@ The evaluator just runs training and reports. Consider adding failure diagnosis 
 
 ### Issues & Recommendations
 
-**Issue 1: Missing Tool Caching Strategy**
+**Issue 1: Missing Tool Caching Strategy** ✅ FIXED
+
+**Status:** Fixed in commit `20509da` - Added `_model: ClassVar` with `_get_model()` classmethod for caching.
 
 Literature embeddings are recomputed on every query:
 
@@ -471,13 +475,13 @@ def _extract_from_markdown(self, content: str) -> PaperInfo | None:
 
 ### Anti-Patterns Found
 
-| Anti-Pattern | Location | Impact |
-|--------------|----------|--------|
-| Regex parsing of agent output | main.py:239 | Fragile, breaks on format changes |
-| Missing output types | tasks.yaml | No structured validation |
-| Hardcoded temperature | crew.py:64 | Suboptimal for different agent roles |
-| Missing task context chain | crew.py:166 | Evaluator lacks change context |
-| Model reloading per call | literature.py:238 | Performance overhead |
+| Anti-Pattern | Location | Impact | Status |
+|--------------|----------|--------|--------|
+| Regex parsing of agent output | main.py:239 | Fragile, breaks on format changes | Open |
+| Missing output types | tasks.yaml | No structured validation | Open |
+| Hardcoded temperature | crew.py:64 | Suboptimal for different agent roles | Open |
+| Missing task context chain | crew.py:166 | Evaluator lacks change context | ✅ Fixed |
+| Model reloading per call | literature.py:238 | Performance overhead | ✅ Fixed |
 
 ### CrewAI Version Compatibility
 
