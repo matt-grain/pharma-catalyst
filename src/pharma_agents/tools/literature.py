@@ -44,15 +44,22 @@ class LiteratureStoreTool(BaseTool):
         paper_id = None
         title = None
 
-        # Look for arxiv ID patterns
+        # Look for arxiv ID patterns (multiple formats)
         arxiv_match = re.search(r"arXiv:(\d{4}\.\d{4,5}(?:v\d+)?)", content)
         if arxiv_match:
             paper_id = arxiv_match.group(1)
 
         # Look for paper ID in "=== Paper XXX ===" format
-        header_match = re.search(r"=== Paper (\S+)", content)
-        if header_match and not paper_id:
-            paper_id = header_match.group(1)
+        if not paper_id:
+            header_match = re.search(r"=== Paper (\d{4}\.\d{4,5}(?:v\d+)?)", content)
+            if header_match:
+                paper_id = header_match.group(1)
+
+        # Fallback: look for any arxiv-style ID anywhere (XXXX.XXXXX format)
+        if not paper_id:
+            fallback_match = re.search(r"\b(\d{4}\.\d{4,5}(?:v\d+)?)\b", content)
+            if fallback_match:
+                paper_id = fallback_match.group(1)
 
         # Look for title
         title_match = re.search(r"[Tt]itle[:\s]*([^\n]+)", content)
