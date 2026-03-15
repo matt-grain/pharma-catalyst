@@ -1,0 +1,8 @@
+{
+  "score": 0.6989,
+  "metric": "ROC_AUC",
+  "direction": "higher_is_better",
+  "property": "clinical trial toxicity",
+  "description": "TensorFlow MLP (128-64-1) + Morgan fingerprints (1024 bits, radius 2)",
+  "updated": "2026-03-14"
+}

@@ -21,6 +21,12 @@ DATASETS = {
         "filename": "bbbp.csv",
         "description": "BBBP (Blood-Brain Barrier Penetration) from MoleculeNet",
     },
+    "clintox": {
+        "url": "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/clintox.csv.gz",
+        "filename": "clintox.csv",
+        "description": "ClinTox (clinical trial toxicity and FDA approval) from MoleculeNet",
+        "compressed": True,
+    },
 }
 
 
