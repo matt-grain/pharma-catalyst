@@ -68,7 +68,7 @@ class WriteTrainPyTool(BaseTool):
 
         # Strip markdown code fences (common LLM output artifact)
         if content.startswith("```python"):
-            content = content[len("```python"):].strip()
+            content = content[len("```python") :].strip()
         if content.startswith("```"):
             content = content[3:].strip()
         if content.endswith("```"):
@@ -88,9 +88,16 @@ class WriteTrainPyTool(BaseTool):
 
         # Block dangerous patterns
         dangerous = [
-            "os.system(", "subprocess.run(", "subprocess.call(",
-            "subprocess.Popen(", "shutil.rmtree(", "__import__(",
-            "eval(", "exec(", "os.remove(", "os.rmdir(",
+            "os.system(",
+            "subprocess.run(",
+            "subprocess.call(",
+            "subprocess.Popen(",
+            "shutil.rmtree(",
+            "__import__(",
+            "eval(",
+            "exec(",
+            "os.remove(",
+            "os.rmdir(",
         ]
         for pattern in dangerous:
             if pattern in content:

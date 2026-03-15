@@ -485,8 +485,13 @@ def run(iterations: int = 10) -> None:
 
             # Permanent errors — abort all iterations
             permanent_markers = [
-                "api key", "authentication", "unauthorized", "403",
-                "invalid model", "model not found", "permission denied",
+                "api key",
+                "authentication",
+                "unauthorized",
+                "403",
+                "invalid model",
+                "model not found",
+                "permission denied",
             ]
             if any(marker in error_msg for marker in permanent_markers):
                 logger.error("PERMANENT ERROR detected — aborting run")

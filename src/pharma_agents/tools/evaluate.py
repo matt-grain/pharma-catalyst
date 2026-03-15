@@ -119,7 +119,8 @@ def run_training(timeout_seconds: int = 180) -> ExperimentResult:
         RESULT_MARKER = "###RESULT###"
         output = result.stdout.strip()
         metric_line = [
-            line for line in output.split("\n")
+            line
+            for line in output.split("\n")
             if RESULT_MARKER in line and metric in line
         ]
         if not metric_line:
