@@ -4,31 +4,47 @@ archivist_task:
 
     Your goal: Build a searchable knowledge base of techniques from recent papers.
 
-    CRITICAL WORKFLOW - You MUST complete ALL steps:
-    1. Search arxiv for "{property} prediction" papers (use search_arxiv)
-    2. For EACH paper found with an arxiv ID (format XXXX.XXXXX):
-       a. Fetch the paper content (use fetch_arxiv_paper with the paper ID)
-       b. IMMEDIATELY store it (use store_paper with the fetched content)
-    3. Repeat search with related terms: "molecular property prediction", "ADMET ML"
+    You have ONE tool: search_and_store. It searches arxiv AND automatically stores
+    all results with embeddings. One call = search + store all papers found.
 
-    MANDATORY: After EVERY fetch_arxiv_paper call, you MUST call store_paper!
-    Pass the entire fetched content directly to store_paper - it will extract the paper info.
+    IMPORTANT: Execute searches ONE AT A TIME, not in parallel.
+    After each search, review and filter before starting the next search.
 
-    Example workflow:
-    - Call: fetch_arxiv_paper("2401.12345")
-    - Get: "=== Paper 2401.12345 === Title: ... Summary: ..."
-    - Call: store_paper(<the entire response above>)
-    - Get: "Stored paper 2401.12345 with embedding"
+    WORKFLOW:
+    1. SEARCH PHASE — Call search_and_store with SPECIFIC queries.
+       Focus on MOLECULAR PROPERTY PREDICTION with ML.
+       The search engine matches each word in your query against paper abstracts.
+       Use 3-4 specific terms per query — every word must appear in the abstract.
+       Good queries:
+       - "toxicity prediction molecular"
+       - "QSAR toxicity deep learning"
+       - "molecular fingerprint toxicity"
+       - "graph neural network molecular property"
+       - "ADMET prediction machine learning"
+       Do 3-5 searches. Each returns ~3 relevant papers.
+       IMPORTANT: Do ONE search at a time, then filter, then next search.
 
-    Store at least 5-10 papers before finishing.
+    2. FILTER PHASE — After EACH search_and_store, review the stored papers.
+       Use remove_paper to DELETE papers that are NOT relevant to {property}
+       prediction on MOLECULES. Remove papers about:
+       - Clinical trial design/logistics (NOT molecular prediction)
+       - General ML theory (not applied to molecules)
+       - Unrelated topics (NLP, computer vision, air pollution, etc.)
+       - Pure biology/chemistry with no ML component
+
+    Papers already in the database are skipped automatically.
+
+    Papers already in database: {existing_papers}
 
     Output format:
-    PAPERS STORED: [count]
-    KEY TECHNIQUES:
-    - [technique from paper X]
-    - [technique from paper Y]
+    SEARCHES DONE: [count]
+    PAPERS STORED: [count kept after filtering]
+    PAPERS REMOVED: [count removed as irrelevant]
+    KEY TOPICS COVERED:
+    - [topic 1]
+    - [topic 2]
   expected_output: >
-    Summary of papers indexed with list of key techniques discovered
+    Summary of searches performed and total papers indexed
   agent: archivist_agent
 
 hypothesis_task:
@@ -84,6 +100,7 @@ implement_task:
     - Training MUST complete within 180 seconds (3 minutes)
     - Avoid grid search or hyperparameter sweeps
     - Keep n_estimators/epochs reasonable (< 500 for tree models, < 50 for neural nets)
+    - ALWAYS sanitize features after computation: replace inf with NaN, then fill NaN (e.g. np.nan_to_num or df.replace([np.inf, -np.inf], np.nan).fillna(0))
   expected_output: >
     Confirmation that train.py passes code_check with no errors
   agent: model_agent

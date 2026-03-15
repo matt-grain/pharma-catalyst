@@ -3,6 +3,9 @@
 import json
 import os
 import re
+import sys
+import time as _time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import ClassVar
@@ -15,6 +18,56 @@ from pharma_agents.memory import get_experiment_name, get_experiments_root
 MAX_SUMMARY_LENGTH = 1000
 MAX_KEY_METHODS = 5
 MIN_FULL_CONTENT_LENGTH = 200
+
+
+@contextmanager
+def _locked_index(index_path: Path):
+    """Read-modify-write index.json with file locking to prevent corruption.
+
+    Uses fcntl on Unix and msvcrt on Windows.
+    """
+    lock_path = index_path.with_suffix(".lock")
+    lock_path.touch(exist_ok=True)
+    lock_file = open(lock_path)  # noqa: SIM115
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            # Retry lock acquisition on Windows (non-blocking by default)
+            for _ in range(50):
+                try:
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    _time.sleep(0.1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+
+        if index_path.exists():
+            try:
+                index = json.loads(index_path.read_text())
+            except (json.JSONDecodeError, ValueError):
+                index = {"papers": {}, "created_at": datetime.now().isoformat()}
+        else:
+            index = {"papers": {}, "created_at": datetime.now().isoformat()}
+        yield index
+        index["updated_at"] = datetime.now().isoformat()
+        index_path.write_text(json.dumps(index, indent=2))
+    finally:
+        if sys.platform == "win32":
+            import msvcrt
+
+            try:
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+        lock_file.close()
 
 
 def get_literature_dir() -> Path:
@@ -71,17 +124,19 @@ class LiteratureStoreTool(BaseTool):
         if title_match:
             title = title_match.group(1).strip().strip("*#")
 
-        # Extract abstract/summary (try multiple patterns)
+        # Extract abstract/summary (try multiple patterns, most specific first)
         summary = None
         for pattern in [
-            r"> Abstract:(.+?)(?:\n\n|\n\||$)",  # Quoted abstract (arxiv page) - can end at EOF
-            r"Summary[:\s]*(.+?)(?:\n\n|Key Techniques|Key Methods|$)",  # alphaxiv format
-            r"\nAbstract\n(.+?)(?:\n\n|$)",  # Abstract as section header
-            r"^Abstract[:\s]+(.+?)(?:\n\n|$)",  # Abstract at line start (not in YAML)
+            r"> Abstract:\s*(.+?)(?:\n\n|\n\||$)",  # Quoted abstract (markdown.new)
+            r"Summary[:\s]+(.+?)(?:\n\n|Key Techniques|Key Methods|$)",  # alphaxiv overview
+            r"\nAbstract\s*\n(.+?)(?:\n\n|$)",  # Abstract as section header (alphaxiv full)
+            r"Abstract\s*[:]\s*(.+?)(?:\n\n|\n1[\s.]|\n#|$)",  # "Abstract:" inline (alphaxiv full)
         ]:
             match = re.search(pattern, content, re.DOTALL)
             if match:
                 summary = match.group(1).strip()
+                # Clean up whitespace from PDF text extraction
+                summary = re.sub(r"\s+", " ", summary)
                 break
         if not summary:
             # Fallback: skip headers and get content
@@ -98,11 +153,25 @@ class LiteratureStoreTool(BaseTool):
             r"Key Techniques[:\s]*(.+?)(?:\n\n|$)", content, re.DOTALL
         )
         if techniques_match:
-            # Split on commas or periods
             methods_text = techniques_match.group(1).strip()
-            key_methods = [
-                m.strip() for m in re.split(r"[,.]", methods_text) if m.strip()
+            # Split on bullet points (lines starting with -)
+            bullets = [
+                line.lstrip("- ").strip()
+                for line in methods_text.split("\n")
+                if line.strip().startswith("-")
             ]
+            if bullets:
+                key_methods = [b for b in bullets if b]
+            elif ", " in methods_text:
+                # Comma-separated (alphaxiv overview single-line format)
+                key_methods = [
+                    m.strip() for m in methods_text.split(", ") if m.strip()
+                ]
+            else:
+                # Fallback: split on periods for non-bulleted text
+                key_methods = [
+                    m.strip() for m in methods_text.split(".") if m.strip()
+                ]
 
         if paper_id:
             return {
@@ -149,31 +218,40 @@ class LiteratureStoreTool(BaseTool):
         if not paper_id or not summary:
             return "Error: paper_id and summary are required."
 
-        # Create embedding
+        # Quick pre-check (without lock) to skip embedding if already stored
+        index_path = lit_dir / "index.json"
+        if index_path.exists():
+            try:
+                existing = json.loads(index_path.read_text())
+            except (json.JSONDecodeError, ValueError):
+                existing = {"papers": {}}
+            if paper_id in existing.get("papers", {}):
+                return f"Paper {paper_id} already in database — skipped."
+            if paper_id in existing.get("removed", []):
+                return f"Paper {paper_id} was previously removed as irrelevant — skipped."
+
+        # Create embedding (outside lock — this is the slow part)
         model = TextEmbedding("BAAI/bge-small-en-v1.5")
         text_to_embed = f"{title}. {summary}"
         embedding = list(model.embed([text_to_embed]))[0].tolist()
 
-        # Load or create index
-        index_path = lit_dir / "index.json"
-        if index_path.exists():
-            index: dict = json.loads(index_path.read_text())
-        else:
-            index = {"papers": {}, "created_at": datetime.now().isoformat()}
+        # Locked read-modify-write to prevent concurrent corruption
+        with _locked_index(index_path) as index:
+            # Re-check under lock (state may have changed during embedding)
+            if paper_id in index.get("papers", {}):
+                return f"Paper {paper_id} already in database — skipped."
+            if paper_id in index.get("removed", []):
+                return f"Paper {paper_id} was previously removed as irrelevant — skipped."
 
-        # Store paper
-        papers_dict: dict = index.get("papers", {})
-        papers_dict[paper_id] = {
-            "title": title,
-            "summary": summary,
-            "key_methods": key_methods,
-            "embedding": embedding,
-            "added_at": datetime.now().isoformat(),
-        }
-        index["papers"] = papers_dict
-        index["updated_at"] = datetime.now().isoformat()
-
-        index_path.write_text(json.dumps(index, indent=2))
+            papers_dict: dict = index.get("papers", {})
+            papers_dict[paper_id] = {
+                "title": title,
+                "summary": summary,
+                "key_methods": key_methods,
+                "embedding": embedding,
+                "added_at": datetime.now().isoformat(),
+            }
+            index["papers"] = papers_dict
 
         # Also save markdown summary
         papers_dir = lit_dir / "papers"
@@ -244,7 +322,10 @@ class LiteratureQueryTool(BaseTool):
         if not index_path.exists():
             return "No literature database found. Run the Archivist first to gather papers."
 
-        index = json.loads(index_path.read_text())
+        try:
+            index = json.loads(index_path.read_text())
+        except (json.JSONDecodeError, ValueError):
+            return "Literature database is corrupted. Re-run the Archivist to rebuild."
         papers = index.get("papers", {})
 
         if not papers:
@@ -282,6 +363,57 @@ class LiteratureQueryTool(BaseTool):
         return "\n".join(output)
 
 
+class RemovePaperTool(BaseTool):
+    """Tool to remove irrelevant papers from the literature database."""
+
+    name: str = "remove_paper"
+    description: str = (
+        "Removes an irrelevant paper from the literature database. "
+        "Input: paper ID (e.g., '2401.12345v1'). "
+        "Use this after search_and_store to filter out papers that are "
+        "NOT relevant to the target prediction task."
+    )
+    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
+
+    def _run(self, paper_id: str) -> str:
+        """Remove paper from literature DB."""
+        paper_id = paper_id.strip()
+        lit_dir = get_literature_dir()
+        index_path = lit_dir / "index.json"
+
+        if not index_path.exists():
+            return "No literature database found."
+
+        with _locked_index(index_path) as index:
+            papers = index.get("papers", {})
+            removed_list: list = index.get("removed", [])
+
+            if paper_id not in papers:
+                # Still add to blacklist so it won't be re-stored
+                if paper_id not in removed_list:
+                    removed_list.append(paper_id)
+                    index["removed"] = removed_list
+                return f"Paper {paper_id} not found in database (blacklisted from future storage)."
+
+            # Remove from index and add to blacklist
+            title = papers[paper_id].get("title", paper_id)
+            del papers[paper_id]
+            index["papers"] = papers
+            if paper_id not in removed_list:
+                removed_list.append(paper_id)
+            index["removed"] = removed_list
+
+        # Remove markdown files (outside lock — no index contention)
+        papers_dir = lit_dir / "papers"
+        safe_id = paper_id.replace("/", "_").replace(":", "_")
+        for suffix in ["", "_full"]:
+            md_file = papers_dir / f"{safe_id}{suffix}.md"
+            if md_file.exists():
+                md_file.unlink()
+
+        return f"Removed '{title}' ({paper_id}) from literature database."
+
+
 class FetchMorePapersTool(BaseTool):
     """Tool for Hypothesis Agent to fetch fresh papers on a specific topic."""
 
@@ -292,7 +424,7 @@ class FetchMorePapersTool(BaseTool):
         "Input: specific topic (e.g., 'attention mechanisms for molecules'). "
         "This searches arxiv, fetches via alphaxiv, and stores in literature DB."
     )
-    cache_function: None = None
+    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
 
     max_calls_per_run: int = 2
     _calls_done: ClassVar[int] = 0
@@ -324,45 +456,58 @@ class FetchMorePapersTool(BaseTool):
 
         results.append(f"Searched arxiv for '{topic}'")
 
-        # Extract paper IDs from search results (format: **XXXX.XXXXX**)
-        paper_ids = re.findall(r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*", search_result)
+        # Extract paper IDs and abstracts from search results
+        # Format: - **XXXX.XXXXX** (date): Title\n  Abstract: ...
+        paper_entries = re.findall(
+            r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*[^:]*:\s*(.+?)\n\s*Abstract:\s*(.+?)(?=\n- \*\*|\n\nFound|\Z)",
+            search_result,
+            re.DOTALL,
+        )
 
-        if not paper_ids:
+        if not paper_entries:
+            # Fallback: just extract IDs
+            paper_ids = re.findall(
+                r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*", search_result
+            )
+            paper_entries = [(pid, pid, "") for pid in paper_ids]
+
+        if not paper_entries:
             return "Could not extract paper IDs from search. Try different keywords."
 
         # Fetch and store top 3 papers
         papers_stored = 0
-        for paper_id in paper_ids[:3]:
-            # Fetch paper
+        for paper_id, title, abstract in paper_entries[:3]:
+            title = title.strip()
+            abstract = abstract.strip()
+
+            # Try to fetch full content (may fail)
             paper_content = fetch_tool._run(paper_id)
-            if "not found" in paper_content.lower():
-                continue
+            full_content = ""
+            if "not available" not in paper_content.lower():
+                full_content = paper_content
 
-            # Extract title and summary from markdown content
-            lines = paper_content.split("\n")
-            title = paper_id  # Default
-            summary = ""
-
-            for idx, line in enumerate(lines):
-                if line.startswith("# "):
-                    title = line[2:].strip()
-                elif line.startswith("## Summary") or line.startswith("## Abstract"):
-                    # Get next few lines as summary
-                    summary = " ".join(lines[idx + 1 : idx + 5]).strip()
-                    break
+            # Use abstract from search if we have it
+            summary = abstract if abstract else ""
+            if not summary and full_content:
+                # Fallback: extract from fetched content
+                extracted = LiteratureStoreTool()._extract_from_markdown(
+                    full_content
+                )
+                if extracted:
+                    summary = extracted.get("summary", "")
+                    title = extracted.get("title", title)
 
             if not summary:
-                summary = " ".join(lines[5:10])[:500]
+                summary = f"Paper on {title}"
 
-            # Store paper with full content
             store_result = store_tool._run(
                 json.dumps(
                     {
                         "paper_id": paper_id,
                         "title": title[:200],
-                        "summary": summary[:1000],
+                        "summary": summary[:MAX_SUMMARY_LENGTH],
                         "key_methods": [],
-                        "full_content": paper_content,
+                        "full_content": full_content,
                     }
                 )
             )

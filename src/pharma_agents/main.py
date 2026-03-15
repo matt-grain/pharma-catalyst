@@ -252,6 +252,73 @@ def git_revert_changes(repo_path: Path) -> bool:
         return False
 
 
+def extract_hypothesis_from_result(crew_result) -> tuple[str, str]:
+    """Extract hypothesis and reasoning from CrewAI structured output.
+
+    The hypothesis_task uses output_pydantic=HypothesisOutput, so we can
+    read proposal/reasoning directly from task outputs — no log parsing needed.
+    Falls back to raw text parsing if structured output is unavailable.
+    """
+    hypothesis = "No hypothesis captured"
+    reasoning = "No reasoning captured"
+
+    try:
+        # CrewOutput.tasks_output contains TaskOutput for each task
+        # hypothesis_task is index 0 (crew) or index 1 (crew_with_archivist)
+        for task_output in getattr(crew_result, "tasks_output", []):
+            pydantic_obj = getattr(task_output, "pydantic", None)
+            if pydantic_obj and hasattr(pydantic_obj, "proposal"):
+                hypothesis = pydantic_obj.proposal
+                reasoning = pydantic_obj.reasoning
+                break
+
+        # Fallback: parse from raw text of task outputs
+        if hypothesis == "No hypothesis captured":
+            for task_output in getattr(crew_result, "tasks_output", []):
+                raw = getattr(task_output, "raw", "")
+                if "PROPOSAL:" in raw:
+                    h, r = _parse_proposal_reasoning(raw)
+                    if h:
+                        hypothesis = h
+                    if r:
+                        reasoning = r
+                    break
+    except Exception as e:
+        logger.debug(f"Could not extract hypothesis from crew result: {e}")
+
+    # Truncate
+    if len(hypothesis) > MAX_HYPOTHESIS_LENGTH:
+        hypothesis = hypothesis[: MAX_HYPOTHESIS_LENGTH - 3] + "..."
+    if len(reasoning) > MAX_REASONING_LENGTH:
+        reasoning = reasoning[: MAX_REASONING_LENGTH - 3] + "..."
+
+    return hypothesis, reasoning
+
+
+def _parse_proposal_reasoning(text: str) -> tuple[str, str]:
+    """Parse PROPOSAL:/REASONING: from raw text."""
+    hypothesis = ""
+    reasoning = ""
+
+    proposal_match = re.search(
+        r"PROPOSAL:\s*(.+?)(?:\nREASONING:|\nCHANGE:|\nLITERATURE|\Z)",
+        text,
+        re.DOTALL,
+    )
+    if proposal_match:
+        hypothesis = proposal_match.group(1).strip()
+
+    reasoning_match = re.search(
+        r"REASONING:\s*(.+?)(?:\nCHANGE:|\nPROPOSAL:|\Z)",
+        text,
+        re.DOTALL,
+    )
+    if reasoning_match:
+        reasoning = reasoning_match.group(1).strip()
+
+    return hypothesis, reasoning
+
+
 def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
     """Extract hypothesis and reasoning from log file.
 
@@ -278,19 +345,29 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
         # Look for the last PROPOSAL/REASONING pair (most recent iteration)
         lines = content.split("\n")
 
+        def is_template_line(text: str) -> bool:
+            """Detect task description template lines (not real agent output)."""
+            template_markers = [
+                "[one-line", "[WHY", "[what the", "[specific",
+                "[value from", "[percentage", "[KEEP or",
+            ]
+            return any(m in text for m in template_markers)
+
         for i, line in enumerate(lines):
             if "PROPOSAL:" in line:
-                # Extract everything after PROPOSAL:
                 proposal_start = line.find("PROPOSAL:") + len("PROPOSAL:")
-                hypothesis = clean_terminal_chars(line[proposal_start:])
-                # If hypothesis continues on next lines, grab them
-                if not hypothesis and i + 1 < len(lines):
-                    hypothesis = clean_terminal_chars(lines[i + 1])
+                candidate = clean_terminal_chars(line[proposal_start:])
+                if not candidate and i + 1 < len(lines):
+                    candidate = clean_terminal_chars(lines[i + 1])
+                if candidate and not is_template_line(candidate):
+                    hypothesis = candidate
             elif "REASONING:" in line:
                 reasoning_start = line.find("REASONING:") + len("REASONING:")
-                reasoning = clean_terminal_chars(line[reasoning_start:])
-                if not reasoning and i + 1 < len(lines):
-                    reasoning = clean_terminal_chars(lines[i + 1])
+                candidate = clean_terminal_chars(line[reasoning_start:])
+                if not candidate and i + 1 < len(lines):
+                    candidate = clean_terminal_chars(lines[i + 1])
+                if candidate and not is_template_line(candidate):
+                    reasoning = candidate
 
         # Truncate if too long
         if len(hypothesis) > MAX_HYPOTHESIS_LENGTH:
@@ -429,13 +506,14 @@ def run(iterations: int = 10) -> None:
 
     def _reset_tool_counters() -> None:
         """Reset per-iteration rate limits on all tools."""
-        from .tools.arxiv import AlphaxivTool, ArxivSearchTool
+        from .tools.arxiv import AlphaxivTool, ArxivSearchTool, SearchAndStoreTool
         from .tools.literature import FetchMorePapersTool
         from .tools.training import InstallPackageTool
         from .tools.skills import SkillLoaderTool
 
         AlphaxivTool.reset_counters()
         ArxivSearchTool.reset_counters()
+        SearchAndStoreTool.reset_counters()
         FetchMorePapersTool.reset_counters()
         InstallPackageTool.reset_counters()
         SkillLoaderTool.reset_counters()
@@ -453,6 +531,18 @@ def run(iterations: int = 10) -> None:
         from .memory import get_metric_direction, get_baseline_config
 
         config = get_baseline_config()
+
+        # Build existing papers list for archivist (avoid re-fetching)
+        existing_papers_str = "None"
+        if literature_index.exists():
+            lit_index = json.loads(literature_index.read_text())
+            lit_papers = lit_index.get("papers", {})
+            if lit_papers:
+                existing_papers_str = "\n".join(
+                    f"- {pid}: {p.get('title', 'untitled')}"
+                    for pid, p in lit_papers.items()
+                )
+
         inputs = {
             "property": config.get("property", "molecular property"),
             "metric": metric,
@@ -462,6 +552,7 @@ def run(iterations: int = 10) -> None:
             if experiment_history
             else "No previous experiments in this run",
             "agent_memory": memory.format_for_prompt(run_number),
+            "existing_papers": existing_papers_str,
         }
 
         # Run the crew (capture stdout to log file)
@@ -520,8 +611,8 @@ def run(iterations: int = 10) -> None:
         }
         experiment_history.append(experiment_entry)
 
-        # Parse hypothesis from log file (hypothesis_agent outputs PROPOSAL/REASONING)
-        hypothesis, reasoning = parse_hypothesis_from_log(log_file)
+        # Extract hypothesis from structured crew output (not transient logs)
+        hypothesis, reasoning = extract_hypothesis_from_result(result)
 
         # Log prominent iteration result
         logger.info("")

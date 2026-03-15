@@ -103,9 +103,24 @@ class WriteTrainPyTool(BaseTool):
             if pattern in content:
                 return f"Error: Dangerous pattern '{pattern}' not allowed in train.py."
 
+        # Warn if features are computed but inf/NaN not handled
+        warns = ""
+        has_feature_computation = any(
+            p in content for p in ["feature", "descriptor", "fingerprint", "log(", "log2(", "/ "]
+        )
+        has_nan_handling = any(
+            p in content for p in ["nan_to_num", "fillna", "replace([np.inf", "np.isinf", "dropna"]
+        )
+        if has_feature_computation and not has_nan_handling:
+            warns = (
+                " WARNING: No inf/NaN handling detected. Add "
+                "df.replace([np.inf, -np.inf], np.nan).fillna(0) after feature computation "
+                "to prevent XGBoost/LightGBM crashes."
+            )
+
         try:
             train_path.write_text(content, encoding="utf-8")
-            return f"Successfully wrote {len(content)} characters to train.py"
+            return f"Successfully wrote {len(content)} characters to train.py.{warns}"
         except Exception as e:
             return f"Error writing to train.py: {e}"
 
@@ -119,7 +134,7 @@ class CodeCheckTool(BaseTool):
         "Returns 'OK' if no issues, or lists errors to fix. "
         "ALWAYS run this AFTER writing code to ensure it will run correctly."
     )
-    cache_function: None = None  # Disable caching - always check fresh file state
+    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
 
     def _run(self, _: str = "") -> str:
         """Run ruff on train.py."""
@@ -198,7 +213,7 @@ class InstallPackageTool(BaseTool):
         "Only ML/data science packages are allowed. "
         "Use this when you need a package that's not installed."
     )
-    cache_function: None = None
+    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
 
     _packages_installed: ClassVar[list[str]] = []
     max_installs_per_run: int = 3

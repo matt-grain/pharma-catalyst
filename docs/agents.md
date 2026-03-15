@@ -58,7 +58,12 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 | `fetch_arxiv_paper` | Get paper summaries via alphaxiv (or arxiv fallback) |
 | `store_paper` | Save with fastembed embeddings for semantic search |
 
-**When Active:** First run of an experiment, or exploration mode (stuck/stagnant)
+**When Active:**
+- **Standalone** via `uv run python -m pharma_agents.research -e <experiment>` — builds/refreshes the literature database before any run. Lets a human DS review what papers the agents will draw from.
+- **First run** of an experiment (no literature exists yet) — runs async alongside the first iteration.
+- **Exploration mode** (stuck/stagnant) — gathers fresh papers to escape local optima.
+
+**Deduplication:** On subsequent calls, the archivist receives a list of papers already in the database and is instructed to search for new topics. The `store_paper` tool also skips papers already indexed, avoiding redundant embedding computation.
 
 ---
 
@@ -256,9 +261,9 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 │                                   ▼          │                              │
 │                         ┌──────────────┐     │                              │
 │                         │  ARCHIVIST   │     │                              │
-│                         │  (gather     │     │                              │
-│                         │   papers)    │     │                              │
-│                         └──────┬───────┘     │                              │
+│                         │  (gather     │     │  (or run standalone:         │
+│                         │   papers)    │     │   python -m pharma_agents    │
+│                         └──────┬───────┘     │   .research -e <exp>)       │
 │                                │             │                              │
 │                                └──────┬──────┘                              │
 │                                       ▼                                     │

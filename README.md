@@ -103,8 +103,7 @@ Copy `.env.example` to `.env` and configure:
 # Required: Google API Key for Gemini
 GOOGLE_API_KEY=your-key-here
 
-# Optional: LLM Model (defaults to gemini-3-flash-preview)
-# Options: gemini/gemini-3-flash-preview, gemini/gemini-2.0-flash, gemini/gemini-1.5-pro
+# Required: LLM Model
 LLM_MODEL=gemini/gemini-3-flash-preview
 ```
 
@@ -144,8 +143,11 @@ pharma-catalyst/
 ### Commands
 
 ```bash
+# Build/refresh literature database (run before first experiment)
+uv run python -m pharma_agents.research -e bbbp
+
 # Start a new run (creates worktree + branch)
-uv run python -m pharma_agents.main
+uv run python -m pharma_agents.main -e bbbp
 
 # Promote a successful run to main (makes it the new baseline)
 uv run python -m pharma_agents.promote 1
@@ -160,6 +162,30 @@ uv run python -m pharma_agents.tools.reset
 # Compare runs
 git diff run/001..run/002 -- experiments/train.py
 ```
+
+### Literature Research
+
+The `research` command runs the Archivist agent standalone to build a literature database **before** any optimization run. This lets a human data scientist review what papers the agents will draw from.
+
+```bash
+# First time: builds the database from scratch
+uv run python -m pharma_agents.research -e clintox
+
+# Subsequent calls: only fetches NEW papers (skips duplicates)
+uv run python -m pharma_agents.research -e clintox
+```
+
+**What it does:**
+1. Searches arxiv for papers related to the experiment's target property
+2. Fetches paper content via alphaxiv (structured markdown)
+3. Stores summaries with embeddings for semantic search
+4. Reports how many papers were added
+
+**No worktree, no training, no model changes.** Safe to run anytime. Results are stored in `experiments/<name>/literature/` and persist across runs.
+
+Browse the results:
+- `experiments/<name>/literature/papers/` — Markdown summaries of each paper
+- `experiments/<name>/literature/index.json` — Search index with embeddings
 
 ### What happens during a run
 
@@ -200,19 +226,27 @@ pharma-catalyst/
 │   ├── main.py                  # Entry point - runs iterations
 │   ├── promote.py               # Promote run branch to main
 │   ├── discard.py               # Discard cancelled/stuck runs
+│   ├── research.py              # Standalone literature research
 │   ├── tools/
-│   │   ├── custom_tools.py      # WriteTrainPyTool, CodeCheckTool
+│   │   ├── training.py          # Read/Write/Run train.py, CodeCheck, InstallPackage
 │   │   ├── evaluate.py          # Fixed evaluation harness
+│   │   ├── arxiv.py             # Arxiv search + paper fetching
+│   │   ├── literature.py        # Literature storage + semantic query
+│   │   ├── skills.py            # Scientific skill loader
 │   │   └── reset.py             # Reset train.py to baseline
 │   └── data/
 │       ├── fetch.py             # Download dataset
 │       └── esol.csv             # ESOL dataset (1,128 molecules)
 ├── experiments/                 # Shared experiment data (stays in main)
-│   ├── baseline.json            # Baseline config (metric, score, direction)
-│   ├── baseline_train.py        # BASELINE code (never modified by agents)
-│   ├── memory.json              # Persistent agent memory (shared)
-│   ├── run_001/                 # Logs for run 1
-│   └── run_002/                 # Logs for run 2
+│   └── <experiment>/            # Per-experiment folder (bbbp, clintox, etc.)
+│       ├── baseline.json        # Baseline config (metric, score, direction)
+│       ├── baseline_train.py    # BASELINE code (never modified by agents)
+│       ├── memory.json          # Persistent agent memory (shared)
+│       ├── literature/          # Literature DB (built by research command)
+│       │   ├── index.json       # Search index with embeddings
+│       │   └── papers/          # Markdown summaries
+│       ├── run_001/             # Logs for run 1
+│       └── run_002/             # Logs for run 2
 ├── .worktrees/                  # Isolated run environments (gitignored)
 │   ├── run_001/                 # Worktree for run 1
 │   └── run_002/                 # Worktree for run 2
@@ -335,7 +369,7 @@ Agent text output is for observability, not decisions.
 - **Fixed evaluation**: Python evaluation harness (no LLM involvement)
 - **Code validation**: ML Engineer runs ruff+pyright before finishing
 - **Experiment logging**: Every run logged with timestamps
-- **Timeout**: Training must complete in 60 seconds
+- **Timeout**: Training must complete in 180 seconds
 - **Revert on failure**: Bad changes don't persist
 - **Git audit trail**: Every improvement is a commit
 - **Memory persistence**: Learnings survive across runs

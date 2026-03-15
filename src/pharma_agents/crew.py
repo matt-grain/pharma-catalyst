@@ -15,15 +15,14 @@ from loguru import logger
 from pydantic import BaseModel
 
 from .tools import (
-    AlphaxivTool,
-    ArxivSearchTool,
     CodeCheckTool,
     FetchMorePapersTool,
     InstallPackageTool,
     LiteratureQueryTool,
-    LiteratureStoreTool,
     ReadTrainPyTool,
+    RemovePaperTool,
     RunTrainPyTool,
+    SearchAndStoreTool,
     SkillLoaderTool,
     WriteTrainPyTool,
 )
@@ -105,9 +104,8 @@ class PharmaAgentsCrew:
             config=self.agents_config["archivist_agent"],  # type: ignore[index]
             llm=get_llm(),
             tools=[
-                ArxivSearchTool(),
-                AlphaxivTool(),
-                LiteratureStoreTool(),
+                SearchAndStoreTool(),
+                RemovePaperTool(),
             ],
             max_iter=20,
             max_execution_time=600,  # 10 min — network I/O heavy
@@ -210,6 +208,20 @@ class PharmaAgentsCrew:
                 self.hypothesis_task(),
                 self.implement_task(),
                 self.evaluate_task(),
+            ],
+            process=Process.sequential,
+            max_rpm=30,
+            verbose=True,
+        )
+
+    def archivist_crew(self) -> Crew:
+        """Create archivist-only crew for standalone literature research."""
+        return Crew(
+            agents=[self.archivist_agent()],
+            tasks=[
+                Task(
+                    config=self.tasks_config["archivist_task"],  # type: ignore[index,call-arg]
+                ),
             ],
             process=Process.sequential,
             max_rpm=30,

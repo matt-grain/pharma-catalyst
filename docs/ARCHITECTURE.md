@@ -11,7 +11,7 @@ Pharma-agents is an autonomous multi-agent system that iteratively improves mole
 | Agent Framework | CrewAI 0.100+ |
 | LLM | Gemini Flash (configurable) |
 | Embeddings | fastembed (BGE-small-en-v1.5, 384 dims) |
-| ML Framework | scikit-learn, RDKit, XGBoost, LightGBM |
+| ML Framework | scikit-learn, RDKit, XGBoost, LightGBM, TF/Keras... |
 | Package Manager | uv |
 | Linting | ruff |
 | Version Control | Git (worktrees for isolation) |

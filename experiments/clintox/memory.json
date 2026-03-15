@@ -1,0 +1,49 @@
+{
+  "runs": {
+    "1": {
+      "run_id": 1,
+      "start_time": "2026-03-14T22:07:01.954361",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-14T22:07:01.955955",
+          "hypothesis": "[one-line description of the change] REASONING: [WHY this approach -",
+          "reasoning": "See log for details",
+          "result": "success",
+          "score_before": 0.7849,
+          "score_after": 0.8984,
+          "improvement_pct": 14.460440820486678,
+          "insight": "Achieved 14.5% improvement"
+        }
+      ],
+      "best_score": 0.8984,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 14.5% per success). Reached ROC_AUC 0.8984. More iterations could yield improvements."
+    },
+    "2": {
+      "run_id": 2,
+      "start_time": "2026-03-14T22:18:24.149225",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-14T22:18:24.151012",
+          "hypothesis": "Integrate RDKit-based physicochemical descriptors with Morgan fingerprints and replace the TensorFlow MLP with a HistGradientBoostingClassifier.",
+          "reasoning": "Small molecular datasets like ClinTox (approx. 1,500 samples) are often better modeled by Gradient Boosted Decision Trees (GBDTs) than deep neural networks, which tend to overfit. HistGradientBoostingClassifier provides robust regularization and handles tabular features efficiently. Furthermore, ...",
+          "result": "success",
+          "score_before": 0.7368,
+          "score_after": 0.9417,
+          "improvement_pct": 27.809446254071656,
+          "insight": "Achieved 27.8% improvement"
+        }
+      ],
+      "best_score": 0.9417,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 27.8% per success). Reached ROC_AUC 0.9417. More iterations could yield improvements."
+    }
+  },
+  "global_best_score": 0.9417,
+  "key_learnings": [],
+  "last_updated": "2026-03-14T22:18:25.539555"
+}
