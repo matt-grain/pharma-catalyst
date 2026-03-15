@@ -81,6 +81,9 @@ implement_task:
     - Keep the same function signature: train() -> float (returns the metric score)
     - MUST pass code_check before finishing (no ruff linting errors)
     - Use install_package for packages like lightgbm, xgboost, catboost if needed
+    - Training MUST complete within 180 seconds (3 minutes)
+    - Avoid grid search or hyperparameter sweeps
+    - Keep n_estimators/epochs reasonable (< 500 for tree models, < 50 for neural nets)
   expected_output: >
     Confirmation that train.py passes code_check with no errors
   agent: model_agent
@@ -97,6 +100,8 @@ evaluate_task:
     2. The tool returns "{metric}:X.XXXX" - extract this value
     3. Compare to baseline {baseline_score} using the direction above
     4. Recommend: KEEP (if improved) or REVERT (if worse or equal)
+
+    The train() function MUST print the result as: ###RESULT### {metric}: score
 
     Output format:
     {metric}: [value from run_train_py tool]

@@ -61,8 +61,41 @@ class WriteTrainPyTool(BaseTool):
     )
 
     def _run(self, content: str) -> str:
-        """Write content to train.py."""
+        """Write content to train.py with validation."""
         train_path = get_experiments_dir() / "train.py"
+
+        content = content.strip()
+
+        # Strip markdown code fences (common LLM output artifact)
+        if content.startswith("```python"):
+            content = content[len("```python"):].strip()
+        if content.startswith("```"):
+            content = content[3:].strip()
+        if content.endswith("```"):
+            content = content[:-3].strip()
+
+        # Reject empty or too-short content
+        if len(content) < 50:
+            return "Error: Content too short — provide the COMPLETE train.py file."
+
+        # Must contain core function
+        if "def train" not in content:
+            return "Error: train.py must contain a 'def train' function."
+
+        # Must have imports
+        if "import " not in content:
+            return "Error: train.py must have import statements."
+
+        # Block dangerous patterns
+        dangerous = [
+            "os.system(", "subprocess.run(", "subprocess.call(",
+            "subprocess.Popen(", "shutil.rmtree(", "__import__(",
+            "eval(", "exec(", "os.remove(", "os.rmdir(",
+        ]
+        for pattern in dangerous:
+            if pattern in content:
+                return f"Error: Dangerous pattern '{pattern}' not allowed in train.py."
+
         try:
             train_path.write_text(content, encoding="utf-8")
             return f"Successfully wrote {len(content)} characters to train.py"
@@ -131,7 +164,7 @@ class RunTrainPyTool(BaseTool):
                 [sys.executable, str(experiments_dir / "train.py")],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=180,
                 cwd=experiments_dir,
             )
             if result.returncode == 0:
@@ -143,7 +176,7 @@ class RunTrainPyTool(BaseTool):
             else:
                 return f"Error: {result.stderr}"
         except subprocess.TimeoutExpired:
-            return "Error: Training timed out (>60s)"
+            return "Error: Training timed out (>180s). Simplify your model: reduce n_estimators, use fewer features, or avoid grid search."
         except Exception as e:
             return f"Error: {e}"
 
@@ -162,6 +195,10 @@ class InstallPackageTool(BaseTool):
 
     _packages_installed: ClassVar[list[str]] = []
     max_installs_per_run: int = 3
+
+    @classmethod
+    def reset_counters(cls) -> None:
+        cls._packages_installed = []
 
     def _run(self, package: str) -> str:
         """Install a package via uv add."""

@@ -69,12 +69,19 @@ load_dotenv()
 # Configure LLM from environment
 def get_llm(temperature: float = 0.7) -> LLM:
     """Get configured LLM from environment variables."""
-    model = os.getenv("LLM_MODEL", "gemini/gemini-3-flash-preview")
-    return LoggingLLM(
-        model=model,
-        api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=temperature,
-    )
+    model = os.getenv("LLM_MODEL")
+    if not model:
+        raise EnvironmentError(
+            "LLM_MODEL environment variable is required. "
+            "Example: LLM_MODEL=gemini/gemini-2.0-flash"
+        )
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "GOOGLE_API_KEY environment variable is required. "
+            "Get a key at https://aistudio.google.com/apikey"
+        )
+    return LoggingLLM(model=model, api_key=api_key, temperature=temperature)
 
 
 @CrewBase
@@ -102,7 +109,8 @@ class PharmaAgentsCrew:
                 AlphaxivTool(),
                 LiteratureStoreTool(),
             ],
-            max_iter=20,  # Reduced - archivist is best-effort, don't loop too long
+            max_iter=20,
+            max_execution_time=600,  # 10 min — network I/O heavy
             verbose=True,
         )
 
@@ -118,6 +126,8 @@ class PharmaAgentsCrew:
                 SkillLoaderTool(),
                 FetchMorePapersTool(),  # Request fresh papers when stuck
             ],
+            max_iter=15,
+            max_execution_time=300,  # 5 min — mostly LLM reasoning
             verbose=True,
         )
 
@@ -133,7 +143,8 @@ class PharmaAgentsCrew:
                 CodeCheckTool(),
                 InstallPackageTool(),
             ],
-            max_iter=40,  # Allow more iterations for code fix cycles
+            max_iter=40,
+            max_execution_time=600,  # 10 min — code fix cycles + training
             verbose=True,
         )
 
@@ -147,6 +158,8 @@ class PharmaAgentsCrew:
                 ReadTrainPyTool(),
                 RunTrainPyTool(),
             ],
+            max_iter=10,
+            max_execution_time=300,  # 5 min — includes training timeout
             verbose=True,
         )
 
@@ -199,6 +212,7 @@ class PharmaAgentsCrew:
                 self.evaluate_task(),
             ],
             process=Process.sequential,
+            max_rpm=30,
             verbose=True,
         )
 
@@ -223,5 +237,6 @@ class PharmaAgentsCrew:
                 self.evaluate_task(),
             ],
             process=Process.sequential,
+            max_rpm=30,
             verbose=True,
         )

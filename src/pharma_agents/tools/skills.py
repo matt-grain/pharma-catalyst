@@ -26,6 +26,10 @@ class SkillLoaderTool(BaseTool):
     max_skills_per_run: int = 3
     _skills_loaded: ClassVar[list[str]] = []  # Shared across instances
 
+    @classmethod
+    def reset_counters(cls) -> None:
+        cls._skills_loaded = []
+
     def _run(self, skill_name: str) -> str:
         """Load a skill by name."""
         skill_name = skill_name.strip().lower()

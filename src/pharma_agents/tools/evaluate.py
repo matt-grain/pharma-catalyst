@@ -54,7 +54,7 @@ class ExperimentResult:
         }
 
 
-def run_training(timeout_seconds: int = 60) -> ExperimentResult:
+def run_training(timeout_seconds: int = 180) -> ExperimentResult:
     """
     Execute train.py and capture results.
 
@@ -77,7 +77,7 @@ def run_training(timeout_seconds: int = 60) -> ExperimentResult:
     ) -> ExperimentResult:
         improvement_pct = None
         recommendation = "REVERT"
-        if score is not None:
+        if score is not None and baseline_score != 0:
             improvement_pct = ((baseline_score - score) / baseline_score) * 100
             if not lower_is_better:
                 improvement_pct = -improvement_pct  # Flip for higher_is_better
@@ -85,6 +85,8 @@ def run_training(timeout_seconds: int = 60) -> ExperimentResult:
                 score < baseline_score if lower_is_better else score > baseline_score
             )
             recommendation = "KEEP" if is_better else "REVERT"
+        elif score is not None:
+            improvement_pct = 0.0
         return ExperimentResult(
             timestamp=timestamp,
             score=score,
@@ -113,9 +115,16 @@ def run_training(timeout_seconds: int = 60) -> ExperimentResult:
                 None, False, result.stderr or "Non-zero exit code", duration
             )
 
-        # Parse metric from output (looks for "METRIC:" pattern, e.g., "RMSE: 0.65")
+        # Parse metric from output — prefer ###RESULT### marker over raw lines
+        RESULT_MARKER = "###RESULT###"
         output = result.stdout.strip()
-        metric_line = [line for line in output.split("\n") if metric in line]
+        metric_line = [
+            line for line in output.split("\n")
+            if RESULT_MARKER in line and metric in line
+        ]
+        if not metric_line:
+            # Fallback: original behavior for backward compat
+            metric_line = [line for line in output.split("\n") if metric in line]
 
         if not metric_line:
             return make_result(

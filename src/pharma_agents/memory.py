@@ -55,6 +55,13 @@ def validate_experiment(experiment: str | None = None) -> None:
             f"Check spelling or create experiments/{exp_name}/baseline.json"
         )
 
+    baseline_train = exp_dir / "baseline_train.py"
+    if not baseline_train.exists():
+        raise SystemExit(
+            f"Experiment '{exp_name}' is missing baseline_train.py.\n"
+            f"Create experiments/{exp_name}/baseline_train.py with the baseline model."
+        )
+
 
 def get_baseline_config() -> dict:
     """Load baseline config from baseline.json."""
@@ -88,6 +95,8 @@ def is_better(new_score: float, old_score: float) -> bool:
 
 def compute_improvement_pct(old_score: float, new_score: float) -> float:
     """Compute improvement percentage (always positive if improved)."""
+    if old_score == 0:
+        return 0.0
     direction = get_metric_direction()
     if direction == "higher_is_better":
         return ((new_score - old_score) / old_score) * 100

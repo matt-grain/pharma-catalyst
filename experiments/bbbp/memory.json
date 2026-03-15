@@ -83,9 +83,30 @@
       "consecutive_failures": 0,
       "conclusion": "PROGRESS_CONTINUING",
       "conclusion_detail": "Still making progress (avg 6.0% per success). Reached ROC_AUC 0.9490. More iterations could yield improvements."
+    },
+    "6": {
+      "run_id": 6,
+      "start_time": "2026-03-14T21:22:40.737088",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-14T21:22:40.739089",
+          "hypothesis": "Implement a soft-voting ensemble of `RandomForestClassifier` and `HistGradientBoostingClassifier` using a comprehensive feature set",
+          "reasoning": "BBB penetration is determined by both passive diffusion (highly correlated with global properties like LogP and TPSA) and active",
+          "result": "failure",
+          "score_before": 0.8951,
+          "score_after": null,
+          "improvement_pct": null,
+          "insight": "Training failed: [21:22:40] Explicit valence for atom # 1 N, 4, is greater than permitted\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] Explicit valence for atom # 6 N, 4, is greater than permitted\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] Explicit valence for atom # 6 N, 4, is greater than permitted\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] Explicit valence for atom # 11 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 12 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] Explicit valence for atom # 5 N, 4, is greater than permitted\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\n[21:22:40] WARNING: not removing hydrogen atom without neighbors\nTraceback (most recent call last):\n  File \"C:\\Projects\\Interviews\\jobs\\Sanofi-AI-ML-Lead\\pharma-agents\\.worktrees\\bbbp\\run_006\\experiments\\bbbp\\train.py\", line 144, in <module>\n    train(verbose=True)\n    ~~~~~^^^^^^^^^^^^^^\n  File \"C:\\Projects\\Interviews\\jobs\\Sanofi-AI-ML-Lead\\pharma-agents\\.worktrees\\bbbp\\run_006\\experiments\\bbbp\\train.py\", line 93, in train\n    X, y = load_data()\n           ~~~~~~~~~^^\n  File \"C:\\Projects\\Interviews\\jobs\\Sanofi-AI-ML-Lead\\pharma-agents\\.worktrees\\bbbp\\run_006\\experiments\\bbbp\\train.py\", line 77, in load_data\n    X = np.array([get_features(smi) for smi in df[\"smiles\"]])\n                  ~~~~~~~~~~~~^^^^^\n  File \"C:\\Projects\\Interviews\\jobs\\Sanofi-AI-ML-Lead\\pharma-agents\\.worktrees\\bbbp\\run_006\\experiments\\bbbp\\train.py\", line 37, in get_features\n    atomInvariantsGenerator=rdFingerprintGenerator.GetMorganFeatureAtomInvGenerator(),\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'rdkit.Chem.rdFingerprintGenerator' has no attribute 'GetMorganFeatureAtomInvGenerator'. Did you mean: 'GetMorganFeatureAtomInvGen'?\n"
+        }
+      ],
+      "best_score": 0.8951,
+      "consecutive_failures": 1,
+      "conclusion": "STUCK",
+      "conclusion_detail": "No successful experiments. This direction may be fundamentally flawed. Future runs should try completely different approaches."
     }
   },
   "global_best_score": 0.949,
   "key_learnings": [],
-  "last_updated": "2026-03-14T12:34:35.050734"
+  "last_updated": "2026-03-14T21:22:40.794460"
 }

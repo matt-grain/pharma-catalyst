@@ -26,6 +26,11 @@ class AlphaxivTool(BaseTool):
     _papers_fetched: ClassVar[int] = 0
     _last_fetch: ClassVar[float] = 0.0
 
+    @classmethod
+    def reset_counters(cls) -> None:
+        cls._papers_fetched = 0
+        cls._last_fetch = 0.0
+
     def _fetch_url(self, url: str) -> str | None:
         """Fetch URL with retry logic."""
         import urllib.error
@@ -136,6 +141,11 @@ class ArxivSearchTool(BaseTool):
     max_retries: int = 2
     _searches_done: ClassVar[int] = 0
     _last_search: ClassVar[float] = 0.0
+
+    @classmethod
+    def reset_counters(cls) -> None:
+        cls._searches_done = 0
+        cls._last_search = 0.0
 
     def _search_arxiv(self, query: str) -> list[dict] | None:
         """Try arxiv API. Returns list of papers or None on failure."""

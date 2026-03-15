@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
@@ -183,6 +184,12 @@ def git_reset_train_to_baseline(repo_path: Path) -> None:
     experiments_dir = repo_path / "experiments" / experiment_name
     baseline = experiments_dir / "baseline_train.py"
     train = experiments_dir / "train.py"
+
+    if not baseline.exists():
+        raise FileNotFoundError(
+            f"Baseline training script not found: {baseline}\n"
+            f"Each experiment needs a baseline_train.py file."
+        )
     shutil.copy(baseline, train)
     logger.info(f"Reset train.py to baseline ({experiment_name})")
 
@@ -420,8 +427,22 @@ def run(iterations: int = 10) -> None:
     # Track experiment history for context
     experiment_history: list[dict] = []
 
+    def _reset_tool_counters() -> None:
+        """Reset per-iteration rate limits on all tools."""
+        from .tools.arxiv import AlphaxivTool, ArxivSearchTool
+        from .tools.literature import FetchMorePapersTool
+        from .tools.training import InstallPackageTool
+        from .tools.skills import SkillLoaderTool
+
+        AlphaxivTool.reset_counters()
+        ArxivSearchTool.reset_counters()
+        FetchMorePapersTool.reset_counters()
+        InstallPackageTool.reset_counters()
+        SkillLoaderTool.reset_counters()
+
     # Run iterations
     for i in range(iterations):
+        _reset_tool_counters()
         logger.info("")
         logger.info("=" * 60)
         logger.info(f"ITERATION {i + 1}/{iterations}")
@@ -458,8 +479,25 @@ def run(iterations: int = 10) -> None:
             logger.info("Crew completed")
             logger.debug(f"Crew output: {result}")
         except Exception as e:
+            error_msg = str(e).lower()
             logger.error(f"Crew error: {e}")
             git_revert_changes(worktree_path)
+
+            # Permanent errors — abort all iterations
+            permanent_markers = [
+                "api key", "authentication", "unauthorized", "403",
+                "invalid model", "model not found", "permission denied",
+            ]
+            if any(marker in error_msg for marker in permanent_markers):
+                logger.error("PERMANENT ERROR detected — aborting run")
+                break
+
+            # Rate limit — wait and retry
+            rate_limit_markers = ["rate limit", "429", "quota", "resource exhausted"]
+            if any(marker in error_msg for marker in rate_limit_markers):
+                logger.warning("Rate limit hit — waiting 60s before next iteration")
+                time.sleep(60)
+
             continue
 
         # Evaluate the result
@@ -604,14 +642,17 @@ def run(iterations: int = 10) -> None:
     logger.info(f"  uv run python -m pharma_agents.promote {run_number}")
 
 
-def promote(run_number: int) -> None:
+def promote(run_number: int, experiment: str | None = None) -> None:
     """
     Promote a run branch to main, making it the new baseline.
 
-    This merges run/XXX into main and updates baseline_train.py + baseline.json.
+    This merges run/EXPERIMENT/XXX into main and updates baseline_train.py + baseline.json.
     """
+    from .memory import get_experiment_name
+
     project_root = Path(__file__).parent.parent.parent.resolve()
-    branch_name = f"run/{run_number:03d}"
+    experiment = experiment or get_experiment_name()
+    branch_name = f"run/{experiment}/{run_number:03d}"
 
     logger.info(f"Promoting {branch_name} to main...")
 
@@ -640,9 +681,10 @@ def promote(run_number: int) -> None:
     # Update baseline_train.py with current train.py
     import shutil
 
-    experiments_dir = project_root / "experiments"
+    experiments_dir = project_root / "experiments" / experiment
     train = experiments_dir / "train.py"
     baseline = experiments_dir / "baseline_train.py"
+    baseline_json = experiments_dir / "baseline.json"
     shutil.copy(train, baseline)
 
     # Get new baseline score
@@ -651,7 +693,6 @@ def promote(run_number: int) -> None:
     eval_result = run_training()
 
     # Update baseline.json - preserve metric config, update score
-    baseline_json = experiments_dir / "baseline.json"
     existing_config = json.loads(baseline_json.read_text())
 
     baseline_data = {

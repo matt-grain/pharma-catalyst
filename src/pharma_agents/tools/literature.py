@@ -297,6 +297,10 @@ class FetchMorePapersTool(BaseTool):
     max_calls_per_run: int = 2
     _calls_done: ClassVar[int] = 0
 
+    @classmethod
+    def reset_counters(cls) -> None:
+        cls._calls_done = 0
+
     def _run(self, topic: str) -> str:
         """Fetch more papers on a topic."""
         from .arxiv import AlphaxivTool, ArxivSearchTool
