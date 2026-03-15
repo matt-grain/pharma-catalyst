@@ -100,7 +100,9 @@ def train(verbose: bool = True) -> float:
     load_time = time.perf_counter() - t0
     if verbose:
         print(f"      Loaded {len(y)} molecules in {load_time:.2f}s")
-        print(f"      Class balance: {y.sum():.0f} toxic / {len(y) - y.sum():.0f} non-toxic")
+        print(
+            f"      Class balance: {y.sum():.0f} toxic / {len(y) - y.sum():.0f} non-toxic"
+        )
 
     # Split
     if verbose:

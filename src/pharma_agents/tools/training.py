@@ -106,10 +106,12 @@ class WriteTrainPyTool(BaseTool):
         # Warn if features are computed but inf/NaN not handled
         warns = ""
         has_feature_computation = any(
-            p in content for p in ["feature", "descriptor", "fingerprint", "log(", "log2(", "/ "]
+            p in content
+            for p in ["feature", "descriptor", "fingerprint", "log(", "log2(", "/ "]
         )
         has_nan_handling = any(
-            p in content for p in ["nan_to_num", "fillna", "replace([np.inf", "np.isinf", "dropna"]
+            p in content
+            for p in ["nan_to_num", "fillna", "replace([np.inf", "np.isinf", "dropna"]
         )
         if has_feature_computation and not has_nan_handling:
             warns = (

@@ -48,8 +48,7 @@ def research(experiment: str | None = None) -> None:
         papers = index.get("papers", {})
         existing_papers = len(papers)
         existing_titles = [
-            f"- {pid}: {p.get('title', 'untitled')}"
-            for pid, p in papers.items()
+            f"- {pid}: {p.get('title', 'untitled')}" for pid, p in papers.items()
         ]
 
     print(f"\n{'=' * 60}")
@@ -91,7 +90,9 @@ def research(experiment: str | None = None) -> None:
             index = json.loads(index_path.read_text())
             new_papers = len(index.get("papers", {}))
         except (json.JSONDecodeError, ValueError):
-            logger.warning("Literature index corrupted by concurrent writes — rebuilding")
+            logger.warning(
+                "Literature index corrupted by concurrent writes — rebuilding"
+            )
             new_papers = 0
 
     added = new_papers - existing_papers

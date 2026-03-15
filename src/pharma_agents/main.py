@@ -348,8 +348,13 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
         def is_template_line(text: str) -> bool:
             """Detect task description template lines (not real agent output)."""
             template_markers = [
-                "[one-line", "[WHY", "[what the", "[specific",
-                "[value from", "[percentage", "[KEEP or",
+                "[one-line",
+                "[WHY",
+                "[what the",
+                "[specific",
+                "[value from",
+                "[percentage",
+                "[KEEP or",
             ]
             return any(m in text for m in template_markers)
 

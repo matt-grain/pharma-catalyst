@@ -158,7 +158,7 @@ class AlphaxivTool(BaseTool):
             "arxiv.org/abs/",
         ]:
             if paper_id.startswith(prefix):
-                paper_id = paper_id[len(prefix):]
+                paper_id = paper_id[len(prefix) :]
         return paper_id.replace(".pdf", "")
 
     def _run(self, paper_id: str) -> str:
@@ -311,8 +311,7 @@ class ArxivSearchTool(BaseTool):
         for r in results:
             abstract = r["abstract"] if r["abstract"] else ""
             formatted.append(
-                f"- **{r['id']}** ({r['date']}): {r['title']}\n"
-                f"  Abstract: {abstract}\n"
+                f"- **{r['id']}** ({r['date']}): {r['title']}\n  Abstract: {abstract}\n"
             )
 
         return f"Found {len(results)} papers for '{query}':\n\n" + "\n".join(formatted)
@@ -403,7 +402,9 @@ class SearchAndStoreTool(BaseTool):
             elif "skipped" in store_result:
                 skipped.append(paper_id)
 
-        output = [f"Search '{query}': {len(stored)} stored, {len(skipped)} already in DB."]
+        output = [
+            f"Search '{query}': {len(stored)} stored, {len(skipped)} already in DB."
+        ]
         output.extend(stored)
         if skipped:
             output.append(f"  (skipped: {', '.join(skipped)})")

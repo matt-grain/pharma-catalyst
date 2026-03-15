@@ -164,14 +164,10 @@ class LiteratureStoreTool(BaseTool):
                 key_methods = [b for b in bullets if b]
             elif ", " in methods_text:
                 # Comma-separated (alphaxiv overview single-line format)
-                key_methods = [
-                    m.strip() for m in methods_text.split(", ") if m.strip()
-                ]
+                key_methods = [m.strip() for m in methods_text.split(", ") if m.strip()]
             else:
                 # Fallback: split on periods for non-bulleted text
-                key_methods = [
-                    m.strip() for m in methods_text.split(".") if m.strip()
-                ]
+                key_methods = [m.strip() for m in methods_text.split(".") if m.strip()]
 
         if paper_id:
             return {
@@ -228,7 +224,9 @@ class LiteratureStoreTool(BaseTool):
             if paper_id in existing.get("papers", {}):
                 return f"Paper {paper_id} already in database — skipped."
             if paper_id in existing.get("removed", []):
-                return f"Paper {paper_id} was previously removed as irrelevant — skipped."
+                return (
+                    f"Paper {paper_id} was previously removed as irrelevant — skipped."
+                )
 
         # Create embedding (outside lock — this is the slow part)
         model = TextEmbedding("BAAI/bge-small-en-v1.5")
@@ -241,7 +239,9 @@ class LiteratureStoreTool(BaseTool):
             if paper_id in index.get("papers", {}):
                 return f"Paper {paper_id} already in database — skipped."
             if paper_id in index.get("removed", []):
-                return f"Paper {paper_id} was previously removed as irrelevant — skipped."
+                return (
+                    f"Paper {paper_id} was previously removed as irrelevant — skipped."
+                )
 
             papers_dict: dict = index.get("papers", {})
             papers_dict[paper_id] = {
@@ -466,9 +466,7 @@ class FetchMorePapersTool(BaseTool):
 
         if not paper_entries:
             # Fallback: just extract IDs
-            paper_ids = re.findall(
-                r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*", search_result
-            )
+            paper_ids = re.findall(r"\*\*(\d{4}\.\d{4,5}(?:v\d+)?)\*\*", search_result)
             paper_entries = [(pid, pid, "") for pid in paper_ids]
 
         if not paper_entries:
@@ -490,9 +488,7 @@ class FetchMorePapersTool(BaseTool):
             summary = abstract if abstract else ""
             if not summary and full_content:
                 # Fallback: extract from fetched content
-                extracted = LiteratureStoreTool()._extract_from_markdown(
-                    full_content
-                )
+                extracted = LiteratureStoreTool()._extract_from_markdown(full_content)
                 if extracted:
                     summary = extracted.get("summary", "")
                     title = extracted.get("title", title)
