@@ -8,7 +8,6 @@ Validates tool parameters, response structures, and documentation accuracy.
 
 import sys
 import time
-import traceback
 
 # Track results
 test_results = []
@@ -37,6 +36,7 @@ def test_tool_loading():
     print("\n=== Test 1: Tool Loading ===")
     try:
         from tooluniverse import ToolUniverse
+
         tu = ToolUniverse()
         tu.load_tools()
 
@@ -76,11 +76,15 @@ def test_tool_loading():
         missing = [t for t in required_tools if t not in all_tools]
 
         if missing:
-            record_result("All required tools loaded", False,
-                          f"Missing tools: {missing}")
+            record_result(
+                "All required tools loaded", False, f"Missing tools: {missing}"
+            )
         else:
-            record_result("All required tools loaded", True,
-                          f"All {len(required_tools)} tools found in {len(all_tools)} total tools")
+            record_result(
+                "All required tools loaded",
+                True,
+                f"All {len(required_tools)} tools found in {len(all_tools)} total tools",
+            )
 
         return tu
     except Exception as e:
@@ -105,19 +109,31 @@ def test_phase0_disambiguation(tu):
                 if len(cids) > 0 and cids[0] == 1983:
                     record_result("PubChem name->CID (Acetaminophen=1983)", True)
                 else:
-                    record_result("PubChem name->CID", True,
-                                  f"CID returned: {cids[0] if cids else 'none'} (expected 1983)")
+                    record_result(
+                        "PubChem name->CID",
+                        True,
+                        f"CID returned: {cids[0] if cids else 'none'} (expected 1983)",
+                    )
             else:
-                record_result("PubChem name->CID", False,
-                              f"Unexpected data structure: {list(cid_data.keys()) if isinstance(cid_data, dict) else type(cid_data)}")
+                record_result(
+                    "PubChem name->CID",
+                    False,
+                    f"Unexpected data structure: {list(cid_data.keys()) if isinstance(cid_data, dict) else type(cid_data)}",
+                )
         else:
             # Try direct access pattern
             if isinstance(result, dict):
-                record_result("PubChem name->CID", True,
-                              f"Non-standard response, keys: {list(result.keys())[:5]}")
+                record_result(
+                    "PubChem name->CID",
+                    True,
+                    f"Non-standard response, keys: {list(result.keys())[:5]}",
+                )
             else:
-                record_result("PubChem name->CID", False,
-                              f"Unexpected response type: {type(result)}")
+                record_result(
+                    "PubChem name->CID",
+                    False,
+                    f"Unexpected response type: {type(result)}",
+                )
     except Exception as e:
         record_result("PubChem name->CID", False, f"Exception: {e}")
 
@@ -131,22 +147,37 @@ def test_phase0_disambiguation(tu):
             if isinstance(data, dict):
                 props = data.get("PropertyTable", {}).get("Properties", [{}])
                 if props and isinstance(props, list) and len(props) > 0:
-                    smiles = props[0].get("CanonicalSMILES") or props[0].get("IsomericSMILES")
+                    smiles = props[0].get("CanonicalSMILES") or props[0].get(
+                        "IsomericSMILES"
+                    )
                     if smiles:
-                        record_result("PubChem CID->properties (SMILES extracted)", True,
-                                      f"SMILES: {smiles}")
+                        record_result(
+                            "PubChem CID->properties (SMILES extracted)",
+                            True,
+                            f"SMILES: {smiles}",
+                        )
                     else:
-                        record_result("PubChem CID->properties", True,
-                                      f"Properties found but no SMILES field. Keys: {list(props[0].keys())[:8]}")
+                        record_result(
+                            "PubChem CID->properties",
+                            True,
+                            f"Properties found but no SMILES field. Keys: {list(props[0].keys())[:8]}",
+                        )
                 else:
-                    record_result("PubChem CID->properties", True,
-                                  f"Data returned, structure: {list(data.keys())[:5]}")
+                    record_result(
+                        "PubChem CID->properties",
+                        True,
+                        f"Data returned, structure: {list(data.keys())[:5]}",
+                    )
             else:
-                record_result("PubChem CID->properties", True,
-                              f"Data type: {type(data)}")
+                record_result(
+                    "PubChem CID->properties", True, f"Data type: {type(data)}"
+                )
         else:
-            record_result("PubChem CID->properties", False,
-                          f"Unexpected response type: {type(result)}")
+            record_result(
+                "PubChem CID->properties",
+                False,
+                f"Unexpected response type: {type(result)}",
+            )
     except Exception as e:
         record_result("PubChem CID->properties", False, f"Exception: {e}")
 
@@ -170,11 +201,15 @@ def test_phase1_toxicity(tu, smiles):
         result = tu.tools.ADMETAI_predict_toxicity(smiles=[smiles])
         if isinstance(result, dict):
             data = result.get("data", result)
-            record_result("ADMETAI_predict_toxicity", True,
-                          f"Response keys: {list(data.keys())[:8] if isinstance(data, dict) else type(data)}")
+            record_result(
+                "ADMETAI_predict_toxicity",
+                True,
+                f"Response keys: {list(data.keys())[:8] if isinstance(data, dict) else type(data)}",
+            )
         else:
-            record_result("ADMETAI_predict_toxicity", True,
-                          f"Response type: {type(result)}")
+            record_result(
+                "ADMETAI_predict_toxicity", True, f"Response type: {type(result)}"
+            )
     except Exception as e:
         record_result("ADMETAI_predict_toxicity", False, f"Exception: {e}")
 
@@ -184,8 +219,9 @@ def test_phase1_toxicity(tu, smiles):
         if isinstance(result, dict):
             record_result("ADMETAI_predict_stress_response", True)
         else:
-            record_result("ADMETAI_predict_stress_response", True,
-                          f"Type: {type(result)}")
+            record_result(
+                "ADMETAI_predict_stress_response", True, f"Type: {type(result)}"
+            )
     except Exception as e:
         record_result("ADMETAI_predict_stress_response", False, f"Exception: {e}")
 
@@ -195,10 +231,15 @@ def test_phase1_toxicity(tu, smiles):
         if isinstance(result, dict):
             record_result("ADMETAI_predict_nuclear_receptor_activity", True)
         else:
-            record_result("ADMETAI_predict_nuclear_receptor_activity", True,
-                          f"Type: {type(result)}")
+            record_result(
+                "ADMETAI_predict_nuclear_receptor_activity",
+                True,
+                f"Type: {type(result)}",
+            )
     except Exception as e:
-        record_result("ADMETAI_predict_nuclear_receptor_activity", False, f"Exception: {e}")
+        record_result(
+            "ADMETAI_predict_nuclear_receptor_activity", False, f"Exception: {e}"
+        )
 
 
 def test_phase2_admet(tu, smiles):
@@ -214,7 +255,10 @@ def test_phase2_admet(tu, smiles):
         ("ADMETAI_predict_clearance_distribution", "Clearance/Distribution"),
         ("ADMETAI_predict_CYP_interactions", "CYP Interactions"),
         ("ADMETAI_predict_physicochemical_properties", "Physicochemical"),
-        ("ADMETAI_predict_solubility_lipophilicity_hydration", "Solubility/Lipophilicity"),
+        (
+            "ADMETAI_predict_solubility_lipophilicity_hydration",
+            "Solubility/Lipophilicity",
+        ),
     ]
 
     for tool_name, label in admet_tools:
@@ -238,7 +282,9 @@ def test_phase3_toxicogenomics(tu):
 
     # Test 5a: Chemical-gene interactions
     try:
-        result = tu.tools.CTD_get_chemical_gene_interactions(input_terms="Acetaminophen")
+        result = tu.tools.CTD_get_chemical_gene_interactions(
+            input_terms="Acetaminophen"
+        )
         if isinstance(result, (list, dict)):
             if isinstance(result, list):
                 count = len(result)
@@ -247,11 +293,13 @@ def test_phase3_toxicogenomics(tu):
                 count = len(data) if isinstance(data, list) else 1
             else:
                 count = 0
-            record_result("CTD chemical-gene interactions", True,
-                          f"Results: {count} interactions")
+            record_result(
+                "CTD chemical-gene interactions", True, f"Results: {count} interactions"
+            )
         else:
-            record_result("CTD chemical-gene interactions", True,
-                          f"Response type: {type(result)}")
+            record_result(
+                "CTD chemical-gene interactions", True, f"Response type: {type(result)}"
+            )
     except Exception as e:
         record_result("CTD chemical-gene interactions", False, f"Exception: {e}")
 
@@ -266,11 +314,17 @@ def test_phase3_toxicogenomics(tu):
                 count = len(data) if isinstance(data, list) else 1
             else:
                 count = 0
-            record_result("CTD chemical-disease associations", True,
-                          f"Results: {count} associations")
+            record_result(
+                "CTD chemical-disease associations",
+                True,
+                f"Results: {count} associations",
+            )
         else:
-            record_result("CTD chemical-disease associations", True,
-                          f"Response type: {type(result)}")
+            record_result(
+                "CTD chemical-disease associations",
+                True,
+                f"Response type: {type(result)}",
+            )
     except Exception as e:
         record_result("CTD chemical-disease associations", False, f"Exception: {e}")
 
@@ -311,14 +365,14 @@ def test_phase5_drugbank(tu):
 
     try:
         result = tu.tools.drugbank_get_safety_by_drug_name_or_drugbank_id(
-            query="Acetaminophen",
-            case_sensitive=False,
-            exact_match=False,
-            limit=5
+            query="Acetaminophen", case_sensitive=False, exact_match=False, limit=5
         )
         if result is not None:
-            record_result("DrugBank safety profile", True,
-                          f"Response type: {type(result).__name__}")
+            record_result(
+                "DrugBank safety profile",
+                True,
+                f"Response type: {type(result).__name__}",
+            )
         else:
             record_result("DrugBank safety profile", False, "None returned")
     except Exception as e:
@@ -349,12 +403,14 @@ def test_phase6_stitch(tu):
         result = tu.tools.STITCH_get_chemical_protein_interactions(
             identifiers=["CIDm01983"],  # STITCH format for PubChem CID
             species=9606,
-            required_score=400
+            required_score=400,
         )
         if result is not None:
             record_result("STITCH chemical-protein interactions", True)
         else:
-            record_result("STITCH chemical-protein interactions", False, "None returned")
+            record_result(
+                "STITCH chemical-protein interactions", False, "None returned"
+            )
     except Exception as e:
         record_result("STITCH chemical-protein interactions", False, f"Exception: {e}")
 
@@ -369,12 +425,14 @@ def test_phase7_structural_alerts(tu):
     try:
         # CHEMBL112 is Acetaminophen
         result = tu.tools.ChEMBL_search_compound_structural_alerts(
-            molecule_chembl_id="CHEMBL112",
-            limit=20
+            molecule_chembl_id="CHEMBL112", limit=20
         )
         if result is not None:
-            record_result("ChEMBL structural alerts", True,
-                          f"Response type: {type(result).__name__}")
+            record_result(
+                "ChEMBL structural alerts",
+                True,
+                f"Response type: {type(result).__name__}",
+            )
         else:
             record_result("ChEMBL structural alerts", False, "None returned")
     except Exception as e:
@@ -394,11 +452,13 @@ def test_environmental_chemical(tu):
         if isinstance(result, (list, dict)):
             data = result if isinstance(result, list) else result.get("data", [])
             count = len(data) if isinstance(data, list) else 0
-            record_result("CTD: BPA gene interactions", True,
-                          f"Found {count} gene interactions")
+            record_result(
+                "CTD: BPA gene interactions", True, f"Found {count} gene interactions"
+            )
         else:
-            record_result("CTD: BPA gene interactions", True,
-                          f"Response: {type(result)}")
+            record_result(
+                "CTD: BPA gene interactions", True, f"Response: {type(result)}"
+            )
     except Exception as e:
         record_result("CTD: BPA gene interactions", False, f"Exception: {e}")
 
@@ -407,11 +467,15 @@ def test_environmental_chemical(tu):
         if isinstance(result, (list, dict)):
             data = result if isinstance(result, list) else result.get("data", [])
             count = len(data) if isinstance(data, list) else 0
-            record_result("CTD: BPA disease associations", True,
-                          f"Found {count} disease associations")
+            record_result(
+                "CTD: BPA disease associations",
+                True,
+                f"Found {count} disease associations",
+            )
         else:
-            record_result("CTD: BPA disease associations", True,
-                          f"Response: {type(result)}")
+            record_result(
+                "CTD: BPA disease associations", True, f"Response: {type(result)}"
+            )
     except Exception as e:
         record_result("CTD: BPA disease associations", False, f"Exception: {e}")
 
@@ -425,7 +489,7 @@ def test_batch_smiles(tu):
 
     # Test batch ADMET prediction with multiple compounds
     smiles_batch = [
-        "CC(=O)Nc1ccc(O)cc1",     # Acetaminophen
+        "CC(=O)Nc1ccc(O)cc1",  # Acetaminophen
         "CC(=O)Oc1ccccc1C(=O)O",  # Aspirin
         "CC(C)Cc1ccc(cc1)C(C)C(=O)O",  # Ibuprofen
     ]
@@ -448,7 +512,9 @@ def generate_report():
     print(f"\nTotal Tests: {total_tests}")
     print(f"Passed: {passed_tests}")
     print(f"Failed: {failed_tests}")
-    print(f"Pass Rate: {passed_tests}/{total_tests} ({100*passed_tests/max(total_tests,1):.1f}%)")
+    print(
+        f"Pass Rate: {passed_tests}/{total_tests} ({100 * passed_tests / max(total_tests, 1):.1f}%)"
+    )
     print()
 
     if failed_tests > 0:
@@ -470,7 +536,7 @@ def generate_report():
 def main():
     print("Chemical Safety & Toxicology Skill - Comprehensive Test Suite")
     print("=" * 60)
-    print(f"Testing against: Acetaminophen (primary), Bisphenol A (environmental)")
+    print("Testing against: Acetaminophen (primary), Bisphenol A (environmental)")
     print()
 
     start_time = time.time()

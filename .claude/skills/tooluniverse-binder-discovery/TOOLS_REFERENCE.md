@@ -115,19 +115,19 @@ result = tu.tools.TheraSAbDab_get_all_therapeutics()
 ```python
 def assess_antibody_competition(tu, target_name):
     """Assess therapeutic antibody competitive landscape."""
-    
+
     # Search by target
     results = tu.tools.TheraSAbDab_search_by_target(target=target_name)
-    
+
     if results.get('status') == 'success':
         antibodies = results['data'].get('therapeutics', [])
-        
+
         # Count by phase
         phases = {}
         for ab in antibodies:
             phase = ab.get('phase', 'Unknown')
             phases[phase] = phases.get(phase, 0) + 1
-        
+
         return {
             'total': len(antibodies),
             'by_phase': phases,
@@ -153,7 +153,7 @@ result = tu.tools.GPCRdb_get_protein(
 # Returns: GPCR family, class, species, sequence info
 ```
 
-### GPCRdb_list_proteins  
+### GPCRdb_list_proteins
 **Purpose**: List GPCR families or proteins in a family
 ```python
 # List all GPCR families

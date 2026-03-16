@@ -99,7 +99,7 @@ Metformin is generally well-tolerated but carries a **boxed warning for lactic a
 ### 3.1 Boxed Warning ⬛
 
 > **LACTIC ACIDOSIS**
-> 
+>
 > Postmarketing cases of metformin-associated lactic acidosis have resulted in death, hypothermia, hypotension, and resistant bradyarrhythmias. The onset is often subtle, accompanied only by nonspecific symptoms such as malaise, myalgias, respiratory distress, somnolence, and abdominal pain.
 >
 > Metformin-associated lactic acidosis was characterized by elevated blood lactate levels (>5 mmol/L), anion gap acidosis, an increased lactate/pyruvate ratio, and metformin plasma levels generally >5 mcg/mL.

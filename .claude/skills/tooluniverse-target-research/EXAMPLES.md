@@ -71,7 +71,7 @@ Function: Receptor tyrosine kinase binding ligands of the EGF family...
 
 ```python
 # Get PDB structures from UniProt entry
-pdb_refs = [xref for xref in entry.get('uniProtKBCrossReferences', []) 
+pdb_refs = [xref for xref in entry.get('uniProtKBCrossReferences', [])
             if xref.get('database') == 'PDB']
 
 # Get details for best structure
@@ -125,7 +125,7 @@ GO Biological Process:
   - Signal transduction (GO:0007165)
   - Cell proliferation (GO:0008283)
   - MAPK cascade (GO:0000165)
-  
+
 GO Molecular Function:
   - Protein tyrosine kinase activity (GO:0004713)
   - ATP binding (GO:0005524)
@@ -245,7 +245,7 @@ Disease Associations (Open Targets):
   2. Glioblastoma multiforme (0.89)
   3. Colorectal cancer (0.82)
   4. Pancreatic cancer (0.75)
-  
+
 ClinVar Pathogenic Variants: 45
   - L858R (common activating mutation)
   - T790M (resistance mutation)
@@ -318,7 +318,7 @@ Safety Liabilities:
   - Diarrhea (common)
   - Interstitial lung disease (rare)
 
-Chemical Probes: 
+Chemical Probes:
   - Gefitinib (SGC probe)
 ```
 
@@ -447,20 +447,20 @@ ids = {
 # Parallel execution
 def assess_druggability():
     results = {}
-    
+
     # 1. Tractability
     results['tractability'] = tu.tools.OpenTargets_get_target_tractability_by_ensemblID(
         ensemblID=ids['ensembl']
     )
-    
+
     # 2. DGIdb assessment
     results['dgidb'] = tu.tools.DGIdb_get_gene_druggability(genes=['KRAS'])
-    
+
     # 3. Known drugs
     results['drugs'] = tu.tools.OpenTargets_get_associated_drugs_by_target_ensemblID(
         ensemblID=ids['ensembl']
     )
-    
+
     # 4. ChEMBL activities
     chembl = tu.tools.ChEMBL_search_targets(
         pref_name__contains='KRAS',
@@ -473,15 +473,15 @@ def assess_druggability():
             target_chembl_id__exact=target_id,
             limit=50
         )
-    
+
     # 5. Structures
     results['structures'] = tu.tools.alphafold_get_prediction(qualifier='P01116')
-    
+
     # 6. Safety
     results['safety'] = tu.tools.OpenTargets_get_target_safety_profile_by_ensemblID(
         ensemblID=ids['ensembl']
     )
-    
+
     return results
 
 druggability = assess_druggability()
@@ -494,7 +494,7 @@ KRAS Druggability Assessment:
 Tractability:
   - Small Molecule: MEDIUM → HIGH (recent breakthroughs!)
   - Previously "undruggable" - now validated
-  
+
 Approved Drugs (G12C-specific):
   - Sotorasib (Lumakras) - 2021
   - Adagrasib (Krazati) - 2022
@@ -584,13 +584,13 @@ def validate_target(gene_symbol, disease_area='cancer'):
     """
     tu = ToolUniverse(use_cache=True)
     tu.load_tools()
-    
+
     validation_results = {}
-    
+
     # 1. GENETIC EVIDENCE
     # Disease associations
     ensembl_id = 'ENSG00000135446'  # CDK4
-    
+
     disease_assoc = tu.tools.OpenTargets_get_diseases_phenotypes_by_target_ensembl(
         ensemblId=ensembl_id
     )
@@ -598,16 +598,16 @@ def validate_target(gene_symbol, disease_area='cancer'):
         'disease_associations': disease_assoc,
         'score': 'HIGH' if any(d.get('score', 0) > 0.5 for d in disease_assoc.get('data', [])) else 'LOW'
     }
-    
+
     # Constraint score
     constraint = tu.tools.gnomad_get_gene_constraints(gene_symbol='CDK4')
     validation_results['constraint'] = constraint
-    
+
     # 2. EXPRESSION EVIDENCE
     # Cancer expression
     hpa_cancer = tu.tools.HPA_get_cancer_prognostics_by_gene(gene_symbol='CDK4')
     validation_results['expression'] = hpa_cancer
-    
+
     # 3. FUNCTIONAL EVIDENCE
     # Pathways
     pathways = tu.tools.Reactome_map_uniprot_to_pathways(id='P11802')
@@ -616,7 +616,7 @@ def validate_target(gene_symbol, disease_area='cancer'):
         'pathways': pathways,
         'go_terms': go_terms
     }
-    
+
     # 4. DRUGGABILITY
     tractability = tu.tools.OpenTargets_get_target_tractability_by_ensemblID(
         ensemblID=ensembl_id
@@ -628,7 +628,7 @@ def validate_target(gene_symbol, disease_area='cancer'):
         'tractability': tractability,
         'existing_drugs': existing_drugs
     }
-    
+
     # 5. SAFETY
     safety = tu.tools.OpenTargets_get_target_safety_profile_by_ensemblID(
         ensemblID=ensembl_id
@@ -640,7 +640,7 @@ def validate_target(gene_symbol, disease_area='cancer'):
         'profile': safety,
         'mouse_models': mouse_models
     }
-    
+
     # 6. COMPETITIVE LANDSCAPE
     lit_count = tu.tools.PubMed_search_articles(
         query=f'{gene_symbol} AND drug AND cancer',
@@ -650,7 +650,7 @@ def validate_target(gene_symbol, disease_area='cancer'):
         'publication_count': lit_count.get('count', 0),
         'maturity': 'mature' if lit_count.get('count', 0) > 1000 else 'emerging'
     }
-    
+
     return validation_results
 
 results = validate_target('CDK4')
@@ -677,7 +677,7 @@ results = validate_target('CDK4')
 - Abemaciclib (Verzenio)
 
 ## Recommendation
-CDK4 is a **validated target** with approved drugs. 
+CDK4 is a **validated target** with approved drugs.
 New entrants would need differentiation (selectivity, CNS penetration, etc.)
 ```
 
@@ -693,41 +693,41 @@ New entrants would need differentiation (selectivity, CNS penetration, etc.)
 def find_targets_for_disease(disease_name):
     tu = ToolUniverse(use_cache=True)
     tu.load_tools()
-    
+
     # 1. Get disease ID
     disease_search = tu.tools.OpenTargets_get_disease_ids_by_name(
         diseaseName=disease_name
     )
     efo_id = disease_search.get('id')  # e.g., EFO_0000249 for Alzheimer's
-    
+
     # 2. Get associated targets
     targets = tu.tools.OpenTargets_get_associated_targets_by_disease_efoId(
         efoId=efo_id
     )
-    
+
     # 3. For top targets, assess druggability
     top_targets = targets.get('data', [])[:10]
-    
+
     target_assessments = []
     for target in top_targets:
         ensembl_id = target.get('target_id')
         symbol = target.get('gene_symbol')
-        
+
         # Druggability
         tract = tu.tools.OpenTargets_get_target_tractability_by_ensemblID(
             ensemblID=ensembl_id
         )
-        
+
         # Existing drugs
         drugs = tu.tools.OpenTargets_get_associated_drugs_by_target_ensemblID(
             ensemblID=ensembl_id
         )
-        
+
         # Safety
         safety = tu.tools.OpenTargets_get_target_safety_profile_by_ensemblID(
             ensemblID=ensembl_id
         )
-        
+
         target_assessments.append({
             'symbol': symbol,
             'ensembl_id': ensembl_id,
@@ -736,7 +736,7 @@ def find_targets_for_disease(disease_name):
             'drug_count': len(drugs.get('data', [])),
             'safety_flags': len(safety.get('data', []))
         })
-    
+
     return target_assessments
 
 alzheimer_targets = find_targets_for_disease("Alzheimer's disease")

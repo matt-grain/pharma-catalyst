@@ -76,7 +76,7 @@ details = tu.tools.FAERS_get_event_details(
 def extract_safety_sections(tu, setid):
     """Extract all safety-relevant sections from label."""
     label = tu.tools.DailyMed_get_spl_by_set_id(setid=setid)
-    
+
     return {
         'boxed_warning': label.get('boxed_warning'),
         'contraindications': label.get('contraindications'),
@@ -250,22 +250,22 @@ papers = tu.tools.openalex_search_works(
 def calculate_prr(a, b, c, d):
     """
     Calculate Proportional Reporting Ratio.
-    
+
     a = reports of drug X with event Y
     b = reports of drug X with all other events
     c = reports of event Y with all other drugs
     d = reports of all other drug-event pairs
-    
+
     PRR = (a/(a+b)) / (c/(c+d))
     """
     prr = (a / (a + b)) / (c / (c + d))
-    
+
     # 95% CI using Rothman formula
     import math
     se = math.sqrt(1/a - 1/(a+b) + 1/c - 1/(c+d))
     ci_lower = math.exp(math.log(prr) - 1.96 * se)
     ci_upper = math.exp(math.log(prr) + 1.96 * se)
-    
+
     return {
         'prr': prr,
         'ci_lower': ci_lower,
@@ -280,11 +280,11 @@ def calculate_prr(a, b, c, d):
 def detect_signal(prr, ci_lower, n_cases):
     """
     Apply signal detection criteria.
-    
+
     WHO-UMC criteria: PRR ≥2, Chi-squared ≥4, N ≥3
     """
     is_signal = prr >= 2 and ci_lower >= 1 and n_cases >= 3
-    
+
     if prr > 10:
         tier = 'T1'  # Critical
     elif prr > 3:
@@ -293,7 +293,7 @@ def detect_signal(prr, ci_lower, n_cases):
         tier = 'T3'  # Mild
     else:
         tier = 'T4'  # Known/expected
-    
+
     return {
         'is_signal': is_signal,
         'tier': tier
@@ -309,33 +309,33 @@ def detect_signal(prr, ci_lower, n_cases):
 ```python
 def generate_safety_profile(tu, drug_name):
     """Generate comprehensive safety profile for a drug."""
-    
+
     # Phase 1: Identify drug
     dailymed = tu.tools.DailyMed_search_spls(drug_name=drug_name)
     chembl = tu.tools.ChEMBL_search_drugs(query=drug_name)
-    
+
     # Phase 2: FAERS events
     events = tu.tools.FAERS_count_reactions_by_drug_event(
         drug_name=drug_name,
         limit=50
     )
-    
+
     # Phase 3: Label warnings
     if dailymed:
         label = tu.tools.DailyMed_get_spl_by_set_id(
             setid=dailymed[0]['setid']
         )
-    
+
     # Phase 4: Pharmacogenomics
     pgx = tu.tools.PharmGKB_search_drug(query=drug_name)
-    
+
     # Phase 5: Clinical trials
     trials = tu.tools.search_clinical_trials(
         intervention=drug_name,
         phase="Phase 3",
         status="Completed"
     )
-    
+
     return {
         'identification': {'dailymed': dailymed, 'chembl': chembl},
         'adverse_events': events,
@@ -350,7 +350,7 @@ def generate_safety_profile(tu, drug_name):
 ```python
 def compare_drug_safety(tu, drug_a, drug_b):
     """Compare safety profiles of two drugs."""
-    
+
     # Get events for both drugs
     events_a = tu.tools.FAERS_count_reactions_by_drug_event(
         drug_name=drug_a, limit=30
@@ -358,13 +358,13 @@ def compare_drug_safety(tu, drug_a, drug_b):
     events_b = tu.tools.FAERS_count_reactions_by_drug_event(
         drug_name=drug_b, limit=30
     )
-    
+
     # Find common events
     events_a_dict = {e['reaction']: e for e in events_a}
     events_b_dict = {e['reaction']: e for e in events_b}
-    
+
     common_events = set(events_a_dict.keys()) & set(events_b_dict.keys())
-    
+
     comparison = []
     for event in common_events:
         comparison.append({
@@ -374,7 +374,7 @@ def compare_drug_safety(tu, drug_a, drug_b):
             'drug_b_prr': events_b_dict[event].get('prr'),
             'drug_b_count': events_b_dict[event].get('count')
         })
-    
+
     return comparison
 ```
 
@@ -383,12 +383,12 @@ def compare_drug_safety(tu, drug_a, drug_b):
 ```python
 def detect_emerging_signals(tu, drug_name, threshold_prr=3.0):
     """Identify signals that may require attention."""
-    
+
     events = tu.tools.FAERS_count_reactions_by_drug_event(
         drug_name=drug_name,
         limit=100
     )
-    
+
     signals = []
     for event in events:
         if event.get('prr', 0) >= threshold_prr:
@@ -397,7 +397,7 @@ def detect_emerging_signals(tu, drug_name, threshold_prr=3.0):
                 drug_name=drug_name,
                 reaction=event['reaction']
             )
-            
+
             signals.append({
                 'event': event['reaction'],
                 'prr': event['prr'],
@@ -405,7 +405,7 @@ def detect_emerging_signals(tu, drug_name, threshold_prr=3.0):
                 'serious_pct': details.get('serious_count', 0) / event['count'],
                 'fatal_count': details.get('death_count', 0)
             })
-    
+
     # Sort by signal strength
     return sorted(signals, key=lambda x: x['prr'], reverse=True)
 ```

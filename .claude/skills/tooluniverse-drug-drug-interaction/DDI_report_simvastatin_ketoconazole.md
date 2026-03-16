@@ -47,4 +47,3 @@
 
 - ✓ Low risk - routine monitoring sufficient
 - No special precautions required
-

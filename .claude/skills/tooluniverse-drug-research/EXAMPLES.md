@@ -192,9 +192,9 @@ faers_deaths = tu.tools.FAERS_count_death_related_by_drug(
 
 ### 6.3 Black Box Warnings
 
-**Lactic Acidosis Warning**: Metformin can cause lactic acidosis, a rare but serious 
-metabolic complication. Risk increases with renal impairment, hepatic impairment, 
-age ≥65, radiologic studies with contrast, surgery, excessive alcohol intake, and 
+**Lactic Acidosis Warning**: Metformin can cause lactic acidosis, a rare but serious
+metabolic complication. Risk increases with renal impairment, hepatic impairment,
+age ≥65, radiologic studies with contrast, surgery, excessive alcohol intake, and
 hypoxic states.
 
 *Source: FDA Label via `PubChem_get_drug_label_info_by_CID`*
@@ -283,26 +283,26 @@ lit_drug = tu.tools.PubMed_search_articles(
 ```markdown
 ## Executive Summary
 
-**Metformin** (PubChem CID: 4091, ChEMBL: CHEMBL1431) is a biguanide antidiabetic 
-agent and the first-line pharmacological treatment for type 2 diabetes mellitus. 
-It works primarily through AMPK activation, reducing hepatic glucose production 
+**Metformin** (PubChem CID: 4091, ChEMBL: CHEMBL1431) is a biguanide antidiabetic
+agent and the first-line pharmacological treatment for type 2 diabetes mellitus.
+It works primarily through AMPK activation, reducing hepatic glucose production
 and improving insulin sensitivity.
 
-The drug has an extensive clinical evidence base spanning 60+ years with 500+ 
-registered clinical trials. Key efficacy data shows HbA1c reductions of 1.0-1.5% 
-as monotherapy [★★★]. The safety profile is generally favorable, though a boxed 
-warning exists for lactic acidosis risk in patients with renal impairment. FAERS 
-data (45,234 reports) shows GI effects as the most common adverse reactions, 
+The drug has an extensive clinical evidence base spanning 60+ years with 500+
+registered clinical trials. Key efficacy data shows HbA1c reductions of 1.0-1.5%
+as monotherapy [★★★]. The safety profile is generally favorable, though a boxed
+warning exists for lactic acidosis risk in patients with renal impairment. FAERS
+data (45,234 reports) shows GI effects as the most common adverse reactions,
 consistent with labeling.
 
-Pharmacogenomic data from PharmGKB identifies SLC22A1 (OCT1) as the key 
-transporter affecting metformin response, though no CPIC dosing guideline 
-currently exists. The drug shows excellent ADMET properties with good 
+Pharmacogenomic data from PharmGKB identifies SLC22A1 (OCT1) as the key
+transporter affecting metformin response, though no CPIC dosing guideline
+currently exists. The drug shows excellent ADMET properties with good
 oral bioavailability and minimal CYP-mediated metabolism.
 
-**Bottom Line**: Metformin remains a well-validated, cost-effective first-line 
-therapy for T2DM with a favorable benefit-risk profile when renal function is 
-monitored. Active research continues into potential benefits in cancer prevention 
+**Bottom Line**: Metformin remains a well-validated, cost-effective first-line
+therapy for T2DM with a favorable benefit-risk profile when renal function is
+monitored. Active research continues into potential benefits in cancer prevention
 and longevity.
 ```
 

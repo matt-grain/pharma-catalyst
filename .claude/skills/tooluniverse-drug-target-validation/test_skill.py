@@ -18,7 +18,6 @@ Each test verifies:
 
 import sys
 import time
-import traceback
 
 # Test tracking
 RESULTS = []
@@ -41,12 +40,9 @@ def record_result(test_name, status, details="", duration=0):
     else:
         SKIPPED += 1
         icon = "SKIP"
-    RESULTS.append({
-        "test": test_name,
-        "status": icon,
-        "details": details,
-        "duration": duration
-    })
+    RESULTS.append(
+        {"test": test_name, "status": icon, "details": details, "duration": duration}
+    )
     print(f"  [{icon}] {test_name} ({duration:.1f}s) {details}")
 
 
@@ -62,7 +58,12 @@ def run_test(test_name, test_func):
         record_result(test_name, "FAIL", str(e), duration=duration)
     except Exception as e:
         duration = time.time() - start
-        record_result(test_name, "FAIL", f"Exception: {type(e).__name__}: {str(e)[:200]}", duration=duration)
+        record_result(
+            test_name,
+            "FAIL",
+            f"Exception: {type(e).__name__}: {str(e)[:200]}",
+            duration=duration,
+        )
 
 
 # ============================================================
@@ -75,6 +76,7 @@ print()
 
 print("Loading ToolUniverse...")
 from tooluniverse import ToolUniverse
+
 tu = ToolUniverse()
 tu.load_tools()
 print(f"Tools loaded: {len(tu.all_tool_dict)}")
@@ -90,8 +92,9 @@ print("=" * 70)
 
 def test_mygene_query():
     result = tu.tools.MyGene_query_genes(
-        query="EGFR", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot,entrezgene"
+        query="EGFR",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot,entrezgene",
     )
     assert result is not None, "MyGene returned None"
     # Result can be dict or list
@@ -100,26 +103,36 @@ def test_mygene_query():
         hit = result[0]
     else:
         hit = result
-        if 'hits' in result:
-            assert len(result['hits']) > 0, "No hits"
-            hit = result['hits'][0]
+        if "hits" in result:
+            assert len(result["hits"]) > 0, "No hits"
+            hit = result["hits"][0]
     # Should contain gene info
-    assert 'symbol' in hit or 'name' in hit or '_id' in hit, f"Missing gene fields. Keys: {list(hit.keys())[:10]}"
+    assert "symbol" in hit or "name" in hit or "_id" in hit, (
+        f"Missing gene fields. Keys: {list(hit.keys())[:10]}"
+    )
 
 
 def test_ensembl_lookup():
-    result = tu.tools.ensembl_lookup_gene(gene_id="ENSG00000146648", species="homo_sapiens")
+    result = tu.tools.ensembl_lookup_gene(
+        gene_id="ENSG00000146648", species="homo_sapiens"
+    )
     assert result is not None, "Ensembl returned None"
     if isinstance(result, dict):
         # Ensembl tools wrap response in {status, data, url, content_type}
-        data = result.get('data', result)
+        data = result.get("data", result)
         assert data is not None, "Ensembl returned None data"
         if isinstance(data, dict):
-            assert 'display_name' in data or 'id' in data or 'version' in data or len(data) > 0, \
-                f"Missing expected fields in data. Keys: {list(data.keys())[:10]}"
+            assert (
+                "display_name" in data
+                or "id" in data
+                or "version" in data
+                or len(data) > 0
+            ), f"Missing expected fields in data. Keys: {list(data.keys())[:10]}"
         # Verify the wrapper fields
-        if 'status' in result:
-            assert 'data' in result, f"Ensembl wrapper missing 'data' key. Keys: {list(result.keys())}"
+        if "status" in result:
+            assert "data" in result, (
+                f"Ensembl wrapper missing 'data' key. Keys: {list(result.keys())}"
+            )
 
 
 def test_uniprot_entry():
@@ -213,8 +226,7 @@ def test_gnomad_constraints():
 
 def test_pubmed_search():
     result = tu.tools.PubMed_search_articles(
-        query='"EGFR" AND "lung cancer" AND (target OR therapeutic)',
-        limit=10
+        query='"EGFR" AND "lung cancer" AND (target OR therapeutic)', limit=10
     )
     assert result is not None, "PubMed returned None"
     # Returns plain list per MEMORY.md
@@ -231,9 +243,10 @@ def test_ot_publications():
 
 def test_ot_evidence_by_datasource():
     result = tu.tools.OpenTargets_get_evidence_by_datasource(
-        efoId="EFO_0003060", ensemblId="ENSG00000146648",
+        efoId="EFO_0003060",
+        ensemblId="ENSG00000146648",
         datasourceIds=["ot_genetics_portal", "eva"],
-        size=20
+        size=20,
     )
     assert result is not None, "OT evidence by datasource returned None"
 
@@ -354,9 +367,7 @@ def test_ot_associated_drugs():
 
 
 def test_chembl_search_mechanisms():
-    result = tu.tools.ChEMBL_search_mechanisms(
-        target_chembl_id="CHEMBL203", limit=20
-    )
+    result = tu.tools.ChEMBL_search_mechanisms(target_chembl_id="CHEMBL203", limit=20)
     assert result is not None, "ChEMBL mechanisms returned None"
 
 
@@ -393,9 +404,7 @@ def test_fda_indications():
 
 def test_clinical_trials():
     result = tu.tools.search_clinical_trials(
-        query_term="EGFR inhibitor",
-        condition="lung cancer",
-        pageSize=10
+        query_term="EGFR inhibitor", condition="lung cancer", pageSize=10
     )
     assert result is not None, "Clinical trials returned None"
 
@@ -413,7 +422,9 @@ def test_ot_drug_warnings():
 
 
 def test_ot_drug_adverse_events():
-    result = tu.tools.OpenTargets_get_drug_adverse_events_by_chemblId(chemblId="CHEMBL553")
+    result = tu.tools.OpenTargets_get_drug_adverse_events_by_chemblId(
+        chemblId="CHEMBL553"
+    )
     assert result is not None, "OT drug adverse events returned None"
 
 
@@ -445,12 +456,14 @@ def test_gtex_expression():
     result = tu.tools.GTEx_get_median_gene_expression(
         operation="median", gencode_id="ENSG00000146648"
     )
-    if result is None or (isinstance(result, dict) and result.get('data') == []):
+    if result is None or (isinstance(result, dict) and result.get("data") == []):
         # Try versioned
         result = tu.tools.GTEx_get_median_gene_expression(
             operation="median", gencode_id="ENSG00000146648.18"
         )
-    assert result is not None, "GTEx expression returned None for both versioned and unversioned"
+    assert result is not None, (
+        "GTEx expression returned None for both versioned and unversioned"
+    )
 
 
 def test_hpa_search():
@@ -555,9 +568,7 @@ def test_go_annotations():
 
 
 def test_string_enrichment():
-    result = tu.tools.STRING_functional_enrichment(
-        protein_ids=["EGFR"], species=9606
-    )
+    result = tu.tools.STRING_functional_enrichment(protein_ids=["EGFR"], species=9606)
     assert result is not None, "STRING enrichment returned None"
 
 
@@ -585,8 +596,7 @@ def test_depmap_dependencies():
 
 def test_pubmed_validation_papers():
     result = tu.tools.PubMed_search_articles(
-        query='"EGFR" AND (CRISPR OR siRNA OR knockdown) AND "lung cancer"',
-        limit=10
+        query='"EGFR" AND (CRISPR OR siRNA OR knockdown) AND "lung cancer"', limit=10
     )
     assert result is not None, "PubMed validation papers returned None"
 
@@ -651,8 +661,7 @@ print("=" * 70)
 
 def test_pubmed_drug_target():
     result = tu.tools.PubMed_search_articles(
-        query='"EGFR" AND (drug target OR therapeutic target)',
-        limit=10
+        query='"EGFR" AND (drug target OR therapeutic target)', limit=10
     )
     assert result is not None, "PubMed drug target papers returned None"
     if isinstance(result, list):
@@ -661,16 +670,14 @@ def test_pubmed_drug_target():
 
 def test_europepmc_search():
     result = tu.tools.EuropePMC_search_articles(
-        query='"EGFR" AND drug target',
-        limit=10
+        query='"EGFR" AND drug target', limit=10
     )
     assert result is not None, "EuropePMC returned None"
 
 
 def test_openalex_search():
     result = tu.tools.openalex_search_works(
-        query="EGFR drug target validation",
-        limit=10
+        query="EGFR drug target validation", limit=10
     )
     assert result is not None, "OpenAlex returned None"
 
@@ -691,8 +698,9 @@ print("=" * 70)
 def test_kras_disambiguation():
     """KRAS - historically undruggable oncogene"""
     result = tu.tools.MyGene_query_genes(
-        query="KRAS", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot"
+        query="KRAS",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot",
     )
     assert result is not None, "MyGene KRAS returned None"
 
@@ -707,8 +715,9 @@ def test_kras_tractability():
 def test_btk_disambiguation():
     """BTK - kinase target for autoimmune + oncology"""
     result = tu.tools.MyGene_query_genes(
-        query="BTK", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot"
+        query="BTK",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot",
     )
     assert result is not None, "MyGene BTK returned None"
 
@@ -723,8 +732,9 @@ def test_btk_drugs():
 def test_pcsk9_disambiguation():
     """PCSK9 - antibody target for hypercholesterolemia"""
     result = tu.tools.MyGene_query_genes(
-        query="PCSK9", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot"
+        query="PCSK9",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot",
     )
     assert result is not None, "MyGene PCSK9 returned None"
 
@@ -739,17 +749,16 @@ def test_pcsk9_safety():
 def test_pdcd1_disambiguation():
     """PD-1 (PDCD1) - immune checkpoint"""
     result = tu.tools.MyGene_query_genes(
-        query="PDCD1", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot"
+        query="PDCD1",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot",
     )
     assert result is not None, "MyGene PDCD1 returned None"
 
 
 def test_pdcd1_clinical_trials():
     result = tu.tools.search_clinical_trials(
-        query_term="PD-1 inhibitor",
-        condition="cancer",
-        pageSize=10
+        query_term="PD-1 inhibitor", condition="cancer", pageSize=10
     )
     assert result is not None, "Clinical trials PD-1 returned None"
 
@@ -776,8 +785,9 @@ def test_full_disambiguation_chain():
     """Test complete ID resolution chain for EGFR"""
     # Step 1: MyGene
     mg = tu.tools.MyGene_query_genes(
-        query="EGFR", species="human",
-        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot,entrezgene"
+        query="EGFR",
+        species="human",
+        fields="symbol,name,ensembl.gene,uniprot.Swiss-Prot,entrezgene",
     )
     assert mg is not None, "Step 1 (MyGene) failed"
 
@@ -874,19 +884,19 @@ print(f"Total Tests:  {TOTAL}")
 print(f"Passed:       {PASSED}")
 print(f"Failed:       {FAILED}")
 print(f"Skipped:      {SKIPPED}")
-print(f"Pass Rate:    {PASSED/TOTAL*100:.1f}%" if TOTAL > 0 else "N/A")
+print(f"Pass Rate:    {PASSED / TOTAL * 100:.1f}%" if TOTAL > 0 else "N/A")
 print()
 
 if FAILED > 0:
     print("FAILED TESTS:")
     print("-" * 50)
     for r in RESULTS:
-        if r['status'] == 'FAIL':
+        if r["status"] == "FAIL":
             print(f"  {r['test']}: {r['details']}")
     print()
 
 # Calculate total test duration
-total_duration = sum(r['duration'] for r in RESULTS)
+total_duration = sum(r["duration"] for r in RESULTS)
 print(f"Total Duration: {total_duration:.1f}s")
 
 # Exit with appropriate code

@@ -109,10 +109,10 @@ image = tu.tools.PubChem_get_compound_2D_image_by_CID(cid=cid)
 if chembl_id:
     # Detailed bioactivity
     activity = tu.tools.ChEMBL_get_bioactivity_by_chemblid(chembl_id=chembl_id)
-    
+
     # Protein targets
     targets = tu.tools.ChEMBL_get_target_by_chemblid(chembl_id=chembl_id)
-    
+
     # Assay data
     assays = tu.tools.ChEMBL_get_assays_by_chemblid(chembl_id=chembl_id)
 ```

@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:markdown.new)",
+      "WebFetch(domain:docs.crewai.com)",
+      "Bash(python:*)",
+      "Bash(cd:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(uv pip:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(find:*)",
+      "Bash(uv add:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "mcp__anima__memory",
+      "mcp__anima__dream",
+      "WebFetch(domain:aiscientist.tools)",
+      "WebFetch(domain:zitniklab.hms.harvard.edu)",
+      "Bash(git clone:*)",
+      "Bash(git checkout:*)",
+      "Bash(uvx tooluniverse:*)"
+    ]
+  }
+}

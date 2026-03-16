@@ -37,22 +37,22 @@ class TrialFeasibilityAnalyzer:
             output_file = f"Trial_Feasibility_{drug_name.replace(' ', '_')}.md"
 
         print("=" * 80)
-        print(f"TRIAL FEASIBILITY ANALYSIS")
+        print("TRIAL FEASIBILITY ANALYSIS")
         print(f"Indication: {indication}")
         print(f"Drug: {drug_name}")
         print(f"Phase: {phase}")
         print("=" * 80)
 
         report = {
-            'indication': indication,
-            'drug': drug_name,
-            'phase': phase,
-            'timestamp': datetime.now().isoformat(),
-            'disease_info': {},
-            'drug_info': {},
-            'precedent_trials': [],
-            'safety_data': {},
-            'feasibility_score': 0
+            "indication": indication,
+            "drug": drug_name,
+            "phase": phase,
+            "timestamp": datetime.now().isoformat(),
+            "disease_info": {},
+            "drug_info": {},
+            "precedent_trials": [],
+            "safety_data": {},
+            "feasibility_score": 0,
         }
 
         # Create report file
@@ -62,31 +62,41 @@ class TrialFeasibilityAnalyzer:
         print("-" * 80)
 
         # PATH 1: Patient Population Sizing
-        report['disease_info'] = self._analyze_patient_population(indication)
-        self._update_report(output_file, "## 1. Patient Population", report['disease_info'])
+        report["disease_info"] = self._analyze_patient_population(indication)
+        self._update_report(
+            output_file, "## 1. Patient Population", report["disease_info"]
+        )
 
         # PATH 2: Drug/Intervention Profile
-        report['drug_info'] = self._analyze_drug(drug_name)
-        self._update_report(output_file, "## 2. Drug Profile", report['drug_info'])
+        report["drug_info"] = self._analyze_drug(drug_name)
+        self._update_report(output_file, "## 2. Drug Profile", report["drug_info"])
 
         # PATH 3: Precedent Trials
-        report['precedent_trials'] = self._find_precedent_trials(indication, drug_name)
-        self._update_report(output_file, "## 3. Precedent Trials", report['precedent_trials'])
+        report["precedent_trials"] = self._find_precedent_trials(indication, drug_name)
+        self._update_report(
+            output_file, "## 3. Precedent Trials", report["precedent_trials"]
+        )
 
         # PATH 4: Safety Assessment
-        report['safety_data'] = self._assess_safety(drug_name)
-        self._update_report(output_file, "## 4. Safety Profile", report['safety_data'])
+        report["safety_data"] = self._assess_safety(drug_name)
+        self._update_report(output_file, "## 4. Safety Profile", report["safety_data"])
 
         # PATH 5: Literature Evidence
         literature = self._search_literature(indication, drug_name)
         self._update_report(output_file, "## 5. Literature Evidence", literature)
 
         # PATH 6: Feasibility Scoring
-        report['feasibility_score'] = self._calculate_feasibility(report)
-        self._update_report(output_file, "## 6. Feasibility Assessment", {
-            'score': report['feasibility_score'],
-            'interpretation': self._interpret_feasibility(report['feasibility_score'])
-        })
+        report["feasibility_score"] = self._calculate_feasibility(report)
+        self._update_report(
+            output_file,
+            "## 6. Feasibility Assessment",
+            {
+                "score": report["feasibility_score"],
+                "interpretation": self._interpret_feasibility(
+                    report["feasibility_score"]
+                ),
+            },
+        )
 
         print(f"\n✅ Analysis complete! Report saved to: {output_file}")
         print(f"📊 Feasibility Score: {report['feasibility_score']}/100")
@@ -95,8 +105,8 @@ class TrialFeasibilityAnalyzer:
 
     def _create_report(self, filename, indication, drug, phase):
         """Create initial report file."""
-        with open(filename, 'w') as f:
-            f.write(f"# Clinical Trial Feasibility Report\n\n")
+        with open(filename, "w") as f:
+            f.write("# Clinical Trial Feasibility Report\n\n")
             f.write(f"**Indication**: {indication}\n")
             f.write(f"**Drug/Intervention**: {drug}\n")
             f.write(f"**Phase**: {phase}\n")
@@ -105,7 +115,7 @@ class TrialFeasibilityAnalyzer:
 
     def _update_report(self, filename, section, data):
         """Update report with new section."""
-        with open(filename, 'a') as f:
+        with open(filename, "a") as f:
             f.write(f"\n{section}\n\n")
             if isinstance(data, dict):
                 for key, value in data.items():
@@ -132,36 +142,36 @@ class TrialFeasibilityAnalyzer:
                 disease_name=indication
             )
 
-            if result.get('data', {}).get('diseases'):
-                diseases = result['data']['diseases']
+            if result.get("data", {}).get("diseases"):
+                diseases = result["data"]["diseases"]
                 if diseases:
                     disease = diseases[0]
-                    population['disease_id'] = disease.get('id', 'N/A')
-                    population['disease_name'] = disease.get('name', indication)
-                    population['description'] = disease.get('description', 'N/A')[:200]
+                    population["disease_id"] = disease.get("id", "N/A")
+                    population["disease_name"] = disease.get("name", indication)
+                    population["description"] = disease.get("description", "N/A")[:200]
                     print(f"   ✅ Found disease: {disease.get('name')}")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-            population['disease_name'] = indication
-            population['description'] = 'Could not retrieve disease information'
+            population["disease_name"] = indication
+            population["description"] = "Could not retrieve disease information"
 
         # Estimate prevalence (using literature search as proxy)
-        print(f"   Estimating prevalence...")
+        print("   Estimating prevalence...")
         try:
             result = self.tu.tools.PubMed_search_articles(
                 query=f'"{indication}"[Title/Abstract] AND "prevalence"[Title/Abstract]',
-                max_results=5
+                max_results=5,
             )
 
-            if isinstance(result, dict) and result.get('data', {}).get('articles'):
-                articles = result['data']['articles']
-                population['prevalence_literature'] = len(articles)
+            if isinstance(result, dict) and result.get("data", {}).get("articles"):
+                articles = result["data"]["articles"]
+                population["prevalence_literature"] = len(articles)
                 print(f"   ✅ Found {len(articles)} prevalence articles")
             else:
-                population['prevalence_literature'] = 0
+                population["prevalence_literature"] = 0
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-            population['prevalence_literature'] = 0
+            population["prevalence_literature"] = 0
 
         return population
 
@@ -176,39 +186,41 @@ class TrialFeasibilityAnalyzer:
                 query=drug_name,  # ✅ CORRECT parameter
                 case_sensitive=False,
                 exact_match=False,
-                limit=1
+                limit=1,
             )
 
-            if result.get('data', {}).get('drugs'):
-                drug = result['data']['drugs'][0]
-                drug_info['drugbank_id'] = drug.get('drugbank_id', 'N/A')
-                drug_info['name'] = drug.get('drug_name', drug_name)
-                drug_info['description'] = drug.get('description', 'N/A')[:200]
-                drug_info['approval_groups'] = drug.get('approval_groups', [])
+            if result.get("data", {}).get("drugs"):
+                drug = result["data"]["drugs"][0]
+                drug_info["drugbank_id"] = drug.get("drugbank_id", "N/A")
+                drug_info["name"] = drug.get("drug_name", drug_name)
+                drug_info["description"] = drug.get("description", "N/A")[:200]
+                drug_info["approval_groups"] = drug.get("approval_groups", [])
                 print(f"   ✅ Found: {drug.get('drug_name')}")
             else:
-                print(f"   ℹ️ Not found in DrugBank (may be novel compound)")
-                drug_info['name'] = drug_name
-                drug_info['status'] = 'Novel or not in database'
+                print("   ℹ️ Not found in DrugBank (may be novel compound)")
+                drug_info["name"] = drug_name
+                drug_info["status"] = "Novel or not in database"
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-            drug_info['name'] = drug_name
-            drug_info['error'] = str(e)
+            drug_info["name"] = drug_name
+            drug_info["error"] = str(e)
 
         # Get pharmacology
-        print(f"   Getting pharmacology...")
+        print("   Getting pharmacology...")
         try:
-            result = self.tu.tools.drugbank_get_pharmacology_by_drug_name_or_drugbank_id(
-                query=drug_name,  # ✅ CORRECT
-                case_sensitive=False,
-                exact_match=False,
-                limit=1
+            result = (
+                self.tu.tools.drugbank_get_pharmacology_by_drug_name_or_drugbank_id(
+                    query=drug_name,  # ✅ CORRECT
+                    case_sensitive=False,
+                    exact_match=False,
+                    limit=1,
+                )
             )
 
-            if result.get('data', {}).get('drugs'):
-                pharm = result['data']['drugs'][0]
-                drug_info['mechanism'] = pharm.get('mechanism_of_action', 'N/A')[:150]
-                print(f"   ✅ Retrieved mechanism")
+            if result.get("data", {}).get("drugs"):
+                pharm = result["data"]["drugs"][0]
+                drug_info["mechanism"] = pharm.get("mechanism_of_action", "N/A")[:150]
+                print("   ✅ Retrieved mechanism")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
 
@@ -219,28 +231,26 @@ class TrialFeasibilityAnalyzer:
         print("\n3️⃣ Precedent Trial Search")
         precedents = []
 
-        print(f"   Searching ClinicalTrials.gov...")
+        print("   Searching ClinicalTrials.gov...")
         try:
             result = self.tu.tools.search_clinical_trials(
-                condition=indication,
-                intervention=drug_name,
-                max_results=10
+                condition=indication, intervention=drug_name, max_results=10
             )
 
-            if result.get('data', {}).get('trials'):
-                trials = result['data']['trials']
+            if result.get("data", {}).get("trials"):
+                trials = result["data"]["trials"]
                 precedents = [
                     {
-                        'nct_id': trial.get('nct_id', 'N/A'),
-                        'title': trial.get('title', 'N/A')[:80],
-                        'status': trial.get('status', 'N/A'),
-                        'phase': trial.get('phase', 'N/A')
+                        "nct_id": trial.get("nct_id", "N/A"),
+                        "title": trial.get("title", "N/A")[:80],
+                        "status": trial.get("status", "N/A"),
+                        "phase": trial.get("phase", "N/A"),
                     }
                     for trial in trials[:5]
                 ]
                 print(f"   ✅ Found {len(trials)} precedent trials")
             else:
-                print(f"   ℹ️ No precedent trials found")
+                print("   ℹ️ No precedent trials found")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
 
@@ -252,36 +262,36 @@ class TrialFeasibilityAnalyzer:
         safety = {}
 
         # Check DrugBank safety data
-        print(f"   Checking safety data...")
+        print("   Checking safety data...")
         try:
             result = self.tu.tools.drugbank_get_safety_by_drug_name_or_drugbank_id(
                 query=drug_name,  # ✅ CORRECT
                 case_sensitive=False,
                 exact_match=False,
-                limit=1
+                limit=1,
             )
 
-            if result.get('data', {}).get('drugs'):
-                safety_data = result['data']['drugs'][0]
-                safety['toxicity'] = safety_data.get('toxicity', 'N/A')[:150]
-                print(f"   ✅ Retrieved safety data")
+            if result.get("data", {}).get("drugs"):
+                safety_data = result["data"]["drugs"][0]
+                safety["toxicity"] = safety_data.get("toxicity", "N/A")[:150]
+                print("   ✅ Retrieved safety data")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
 
         # Check FDA warnings
-        print(f"   Checking FDA warnings...")
+        print("   Checking FDA warnings...")
         try:
             result = self.tu.tools.FDA_get_warnings_and_cautions_by_drug_name(
                 drug_name=drug_name
             )
 
-            if result.get('data'):
-                warnings = result['data'].get('warnings', [])
-                safety['fda_warnings_count'] = len(warnings)
+            if result.get("data"):
+                warnings = result["data"].get("warnings", [])
+                safety["fda_warnings_count"] = len(warnings)
                 print(f"   ✅ Found {len(warnings)} FDA warnings")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-            safety['fda_warnings_count'] = 0
+            safety["fda_warnings_count"] = 0
 
         return safety
 
@@ -294,28 +304,25 @@ class TrialFeasibilityAnalyzer:
         print(f"   PubMed search: {query[:60]}...")
 
         try:
-            result = self.tu.tools.PubMed_search_articles(
-                query=query,
-                max_results=20
-            )
+            result = self.tu.tools.PubMed_search_articles(query=query, max_results=20)
 
-            if isinstance(result, dict) and result.get('data', {}).get('articles'):
-                articles = result['data']['articles']
-                literature['article_count'] = len(articles)
-                literature['top_articles'] = [
+            if isinstance(result, dict) and result.get("data", {}).get("articles"):
+                articles = result["data"]["articles"]
+                literature["article_count"] = len(articles)
+                literature["top_articles"] = [
                     {
-                        'title': art.get('title', 'N/A')[:80],
-                        'pmid': art.get('pmid', 'N/A')
+                        "title": art.get("title", "N/A")[:80],
+                        "pmid": art.get("pmid", "N/A"),
                     }
                     for art in articles[:3]
                 ]
                 print(f"   ✅ Found {len(articles)} articles")
             else:
-                literature['article_count'] = 0
-                print(f"   ℹ️ No articles found")
+                literature["article_count"] = 0
+                print("   ℹ️ No articles found")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-            literature['article_count'] = 0
+            literature["article_count"] = 0
 
         return literature
 
@@ -325,29 +332,29 @@ class TrialFeasibilityAnalyzer:
         score = 0
 
         # Disease information available: +20
-        if report['disease_info'].get('disease_id'):
+        if report["disease_info"].get("disease_id"):
             score += 20
-            print(f"   ✅ Disease identified: +20")
+            print("   ✅ Disease identified: +20")
 
         # Drug information available: +20
-        if report['drug_info'].get('drugbank_id'):
+        if report["drug_info"].get("drugbank_id"):
             score += 20
-            print(f"   ✅ Drug in database: +20")
+            print("   ✅ Drug in database: +20")
 
         # Precedent trials exist: +30
-        if len(report['precedent_trials']) > 0:
+        if len(report["precedent_trials"]) > 0:
             score += 30
-            print(f"   ✅ Precedent trials found: +30")
+            print("   ✅ Precedent trials found: +30")
 
         # Safety data available: +15
-        if report['safety_data']:
+        if report["safety_data"]:
             score += 15
-            print(f"   ✅ Safety data available: +15")
+            print("   ✅ Safety data available: +15")
 
         # Literature evidence: +15
-        if report.get('literature', {}).get('article_count', 0) > 5:
+        if report.get("literature", {}).get("article_count", 0) > 5:
             score += 15
-            print(f"   ✅ Strong literature: +15")
+            print("   ✅ Strong literature: +15")
 
         print(f"   📊 Total Score: {score}/100")
 
@@ -381,15 +388,15 @@ def main():
     report = analyzer.analyze(
         indication="EGFR-mutant non-small cell lung cancer",
         drug_name="osimertinib",
-        phase="Phase 2"
+        phase="Phase 2",
     )
 
     print("\n" + "=" * 80)
     print("✅ PIPELINE COMPLETE")
     print("=" * 80)
-    print(f"\n📄 Report: Trial_Feasibility_osimertinib.md")
+    print("\n📄 Report: Trial_Feasibility_osimertinib.md")
     print(f"📊 Feasibility Score: {report['feasibility_score']}/100")
-    print(f"\n💡 Trial design skill is now functional!")
+    print("\n💡 Trial design skill is now functional!")
 
 
 if __name__ == "__main__":

@@ -491,7 +491,7 @@ db_confirms = any(t['gene_symbol'] == target for t in db_targets.get('data', [])
 
 # Check DGIdb
 dgidb = tu.tools.DGIdb_get_drug_gene_interactions(gene_name=target)
-dgidb_confirms = any(d['drug_name'].lower() == drug.lower() 
+dgidb_confirms = any(d['drug_name'].lower() == drug.lower()
                      for d in dgidb.get('data', []))
 
 # Check ChEMBL
@@ -552,9 +552,9 @@ pmc = tu.tools.EuropePMC_search_articles(query=query, limit=100)
 trials = tu.tools.ClinicalTrials_search(condition=disease, intervention=drug)
 
 # Count evidence types
-review_count = sum(1 for p in pubmed.get('data', []) 
+review_count = sum(1 for p in pubmed.get('data', [])
                    if 'review' in p.get('title', '').lower())
-rct_count = sum(1 for p in pubmed.get('data', []) 
+rct_count = sum(1 for p in pubmed.get('data', [])
                 if 'randomized' in p.get('title', '').lower())
 trial_count = len(trials.get('data', []))
 

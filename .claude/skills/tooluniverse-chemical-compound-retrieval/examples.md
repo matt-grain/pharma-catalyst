@@ -98,17 +98,17 @@ chembl_result = tu.tools.ChEMBL_search_compounds(
 
 if chembl_result["data"]:
     chembl_id = chembl_result["data"][0]["molecule_chembl_id"]
-    
+
     # Get bioactivity from ChEMBL
     activity = tu.tools.ChEMBL_get_bioactivity_by_chemblid(
         chembl_id=chembl_id
     )
-    
+
     # Get targets
     targets = tu.tools.ChEMBL_get_target_by_chemblid(
         chembl_id=chembl_id
     )
-    
+
     print(f"ChEMBL ID: {chembl_id}")
     print(f"Bioactivities: {len(activity['data'])}")
     print(f"Targets: {len(targets['data'])}")

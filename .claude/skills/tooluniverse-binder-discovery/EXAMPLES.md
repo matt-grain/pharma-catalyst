@@ -56,8 +56,8 @@ activities = tu.tools.ChEMBL_get_target_activities(
 # → 4,847 activity records
 
 # Step 2.2: Filter to potent compounds
-potent = [a for a in activities['activities'] 
-          if a['standard_type'] in ['IC50', 'Ki'] 
+potent = [a for a in activities['activities']
+          if a['standard_type'] in ['IC50', 'Ki']
           and a['standard_value'] and float(a['standard_value']) < 100]
 # → 312 compounds with IC50/Ki < 100 nM
 
@@ -336,7 +336,7 @@ all_smiles = [m['smiles'] for m in similar['molecules']]
 admet_results = tu.tools.ADMETAI_predict_toxicity(smiles=all_smiles)
 
 # Step 4: Filter for improved hERG
-improved = [m for m, a in zip(similar['molecules'], admet_results) 
+improved = [m for m, a in zip(similar['molecules'], admet_results)
             if a['hERG'] < 0.5]  # Improved from 0.72
 # → 34 analogs with improved hERG
 
@@ -460,7 +460,7 @@ if nvidia_available:
     )
     reference_confidence = validation_result['poses'][0]['confidence']
     # → 0.92 (excellent)
-    
+
     # Option B: Boltz2 (from sequence + SMILES)
     boltz_result = tu.tools.NvidiaNIM_boltz2(
         polymers=[{"molecule_type": "protein", "sequence": cdk4_sequence}],
@@ -518,7 +518,7 @@ if nvidia_available:
     )
     # → 100 generated molecules with QED scores
     generated_mols = genmol_result['molecules']
-    
+
     # Filter by basic criteria
     good_qed = [m for m in generated_mols if m['QED'] > 0.5]
     # → 78 pass QED filter
@@ -573,7 +573,7 @@ admet_passed = 67  # Compounds passing all ADMET filters
 if nvidia_available:
     # Get reference score
     reference_confidence = 0.92  # From Phase 3.5
-    
+
     # Dock all candidates
     docking_results = []
     for compound in admet_passed_compounds:
@@ -582,10 +582,10 @@ if nvidia_available:
             ligand=compound['sdf'],
             num_poses=5
         )
-        
+
         best_confidence = result['poses'][0]['confidence']
         vs_reference = (best_confidence / reference_confidence - 1) * 100
-        
+
         docking_results.append({
             'id': compound['id'],
             'smiles': compound['smiles'],
@@ -593,7 +593,7 @@ if nvidia_available:
             'vs_reference_pct': vs_reference,
             'evidence_tier': assign_tier(best_confidence, reference_confidence)
         })
-    
+
     # Sort by confidence
     ranked = sorted(docking_results, key=lambda x: x['confidence'], reverse=True)
 ```
@@ -782,7 +782,7 @@ mean_plddt = sum(plddt_scores) / len(plddt_scores)
 print(f"Mean pLDDT: {mean_plddt:.1f}")
 if mean_plddt < 70:
     print("WARNING: Low confidence structure, binding site predictions may be unreliable")
-    
+
 # Check binding residue confidence specifically
 binding_residues = [10, 15, 50, 80]  # Known binding site residues
 for res in binding_residues:

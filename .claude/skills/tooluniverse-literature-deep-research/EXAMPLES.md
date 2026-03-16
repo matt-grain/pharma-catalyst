@@ -52,7 +52,7 @@ Search: `"ATP6V1A"[Title]` - first 20 results reviewed.
 - Related but distinct: ATP6V0A1-4 (V0 domain vs V1 domain)
 - "V-ATPase" is a complex name that may include V0 subunits
 
-**Search strategy**: 
+**Search strategy**:
 - Use exact symbol for precision: "ATP6V1A"
 - For broader V-ATPase context: "V-ATPase" AND (V1 OR catalytic OR "A subunit")
 - Exclude pure V0 papers when V1-specific: NOT "V0 domain" NOT "a1 subunit"
@@ -138,12 +138,12 @@ Search: `"ATP6V1A"[Title]` - first 20 results reviewed.
 ## 6. Core Mechanisms
 
 ### 6.1 Molecular Function
-ATP6V1A is the catalytic A subunit of the vacuolar H+-ATPase (V-ATPase), 
-responsible for ATP hydrolysis that drives proton translocation across membranes 
+ATP6V1A is the catalytic A subunit of the vacuolar H+-ATPase (V-ATPase),
+responsible for ATP hydrolysis that drives proton translocation across membranes
 [★★★ Mechanistic: PMID:12345678, crystal structure + biochemistry].
 
-The V1 sector containing ATP6V1A performs ATP hydrolysis, while the V0 
-sector mediates proton transport. Rotation of the central stalk couples 
+The V1 sector containing ATP6V1A performs ATP hydrolysis, while the V0
+sector mediates proton transport. Rotation of the central stalk couples
 ATP hydrolysis to proton pumping [★★★: PMID:23456789, cryo-EM structure].
 
 **Evidence Quality**: Strong (8 mechanistic studies with direct biochemical evidence)
@@ -178,7 +178,7 @@ Osteoclasts use V-ATPase for extracellular acidification:
 ### 12.1 Lysosomal Function & Autophagy (47 papers)
 **Evidence Quality**: Strong (32 mechanistic, 11 functional, 4 association)
 
-ATP6V1A is essential for lysosomal acidification, which is prerequisite for 
+ATP6V1A is essential for lysosomal acidification, which is prerequisite for
 autophagy completion. Studies demonstrate that:
 - V-ATPase activity required for autophagosome-lysosome fusion [★★★: PMID:xxx]
 - Bafilomycin A1 blocks autophagic flux via V-ATPase inhibition [★★★: PMID:xxx]
@@ -234,27 +234,27 @@ Multiple viruses exploit V-ATPase for entry:
 
 ### 14.1 Integrated Biological Model
 
-ATP6V1A is the catalytic engine of the V-ATPase proton pump, essential for 
-acidifying lysosomes and other intracellular compartments. Our literature 
+ATP6V1A is the catalytic engine of the V-ATPase proton pump, essential for
+acidifying lysosomes and other intracellular compartments. Our literature
 synthesis supports the following model:
 
-**Core Function**: ATP6V1A hydrolyzes ATP to power proton translocation, 
+**Core Function**: ATP6V1A hydrolyzes ATP to power proton translocation,
 maintaining lysosomal pH at 4.5-5.0 [strong evidence from 15+ mechanistic studies].
 
-**Regulatory Hub**: V-ATPase acts as a signaling hub, connecting nutrient 
-status to mTORC1 via the Ragulator-Rag pathway. When amino acids are present, 
-V-ATPase promotes mTORC1 lysosomal recruitment [moderate evidence, mechanism 
+**Regulatory Hub**: V-ATPase acts as a signaling hub, connecting nutrient
+status to mTORC1 via the Ragulator-Rag pathway. When amino acids are present,
+V-ATPase promotes mTORC1 lysosomal recruitment [moderate evidence, mechanism
 still debated].
 
 **Disease Relevance**:
-- Loss-of-function: Osteopetrosis (osteoclast defect), neurodegeneration 
+- Loss-of-function: Osteopetrosis (osteoclast defect), neurodegeneration
   (impaired autophagy) [strong genetic evidence]
-- Gain-of-function/upregulation: Cancer progression, tumor acidification 
+- Gain-of-function/upregulation: Cancer progression, tumor acidification
   [moderate association evidence]
 - Exploitation: Viral entry dependency [strong for influenza, moderate for others]
 
-**Key Uncertainty**: The precise mechanism of V-ATPase-mTORC1 coupling, 
-specifically whether V-ATPase ATPase activity vs. scaffolding function 
+**Key Uncertainty**: The precise mechanism of V-ATPase-mTORC1 coupling,
+specifically whether V-ATPase ATPase activity vs. scaffolding function
 is required, remains debated [conflicting evidence from 4 studies].
 
 ### 14.2 Testable Hypotheses
@@ -356,7 +356,7 @@ Search `"TRAG"[Title]` reveals multiple meanings:
 
 **Final corpus**: 132 papers (from 8 initial)
 
-**Note**: For this sparse target, citation expansion (124 papers) vastly 
+**Note**: For this sparse target, citation expansion (124 papers) vastly
 outperformed keyword search (23 papers).
 ```
 
@@ -372,15 +372,15 @@ outperformed keyword search (23 papers).
 
 ```markdown
 **Autophagy**:
-ATP6V1A is essential for lysosomal acidification, which is required for 
-autophagy completion [★★★ Mechanistic: PMID:22153073, biochemical + genetic]. 
-Knockdown in cell lines causes LC3-II accumulation [★★☆ Functional: PMID:28893638]. 
+ATP6V1A is essential for lysosomal acidification, which is required for
+autophagy completion [★★★ Mechanistic: PMID:22153073, biochemical + genetic].
+Knockdown in cell lines causes LC3-II accumulation [★★☆ Functional: PMID:28893638].
 Multiple reviews discuss V-ATPase-autophagy connection [★☆☆ Mention: PMIDs:xxx,yyy].
 
 **Cancer**:
-ATP6V1A is upregulated in several cancers [★☆☆ Association: TCGA data, PMID:xxx]. 
-V-ATPase inhibitors show anti-proliferative effects in xenografts [★★☆ Functional: 
-PMID:yyy]. The mechanistic role in cancer progression is hypothesized but not 
+ATP6V1A is upregulated in several cancers [★☆☆ Association: TCGA data, PMID:xxx].
+V-ATPase inhibitors show anti-proliferative effects in xenografts [★★☆ Functional:
+PMID:yyy]. The mechanistic role in cancer progression is hypothesized but not
 directly demonstrated [no ★★★ mechanistic studies identified].
 
 **Summary**:

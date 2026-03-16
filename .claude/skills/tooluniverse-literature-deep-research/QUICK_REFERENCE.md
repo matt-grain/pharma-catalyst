@@ -74,7 +74,7 @@ EuropePMC_get_references(pmid) → Backward citations
 
 **In report**:
 ```markdown
-Target X regulates pathway Y [★★★: PMID:12345678] through direct 
+Target X regulates pathway Y [★★★: PMID:12345678] through direct
 phosphorylation [★★☆: PMID:23456789].
 ```
 
