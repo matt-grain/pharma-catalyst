@@ -31,7 +31,13 @@ def get_experiments_dir() -> Path:
     """
     override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
     if override:
-        return Path(override)
+        resolved = Path(override).resolve()
+        # Guard against path traversal via relative components
+        if ".." in Path(override).parts:
+            raise ValueError(
+                f"PHARMA_EXPERIMENTS_DIR contains path traversal: {override}"
+            )
+        return resolved
     return get_experiments_root() / get_experiment_name()
 
 
@@ -115,13 +121,17 @@ class Experiment:
     reasoning: str  # WHY this direction was taken
 
     # The result
-    result: str  # "success" or "failure"
+    result: str  # "success", "failure", or "rejected_by_review"
     score_before: float
     score_after: Optional[float]
     improvement_pct: Optional[float]
 
     # The learning
     insight: str  # What we learned (especially WHY it failed/succeeded)
+
+    # Review panel feedback (when review panel is enabled)
+    review_verdict: Optional[str] = None
+    review_feedback: Optional[str] = None
 
 
 @dataclass
@@ -221,6 +231,8 @@ class AgentMemory:
         score_before: float,
         score_after: Optional[float],
         insight: str,
+        review_verdict: Optional[str] = None,
+        review_feedback: Optional[str] = None,
     ) -> None:
         """Record an experiment."""
         # Ensure run exists
@@ -231,7 +243,7 @@ class AgentMemory:
 
         # Calculate improvement (direction-aware)
         improvement = None
-        if score_after and score_before:
+        if score_after is not None and score_before is not None:
             improvement = compute_improvement_pct(score_before, score_after)
 
         exp = Experiment(
@@ -244,15 +256,21 @@ class AgentMemory:
             score_after=score_after,
             improvement_pct=improvement,
             insight=insight,
+            review_verdict=review_verdict,
+            review_feedback=review_feedback,
         )
         run_memory.experiments.append(exp)
 
         # Track consecutive failures
         if result == "success":
             run_memory.consecutive_failures = 0
-            if score_after and is_better(score_after, run_memory.best_score):
+            if score_after is not None and is_better(
+                score_after, run_memory.best_score
+            ):
                 run_memory.best_score = score_after
-            if score_after and is_better(score_after, self.global_best_score):
+            if score_after is not None and is_better(
+                score_after, self.global_best_score
+            ):
                 self.global_best_score = score_after
         else:
             run_memory.consecutive_failures += 1
@@ -315,9 +333,14 @@ class AgentMemory:
                 "Incremental changes exhausted. Try different model families or features."
             )
         elif len(successes) > 0:
-            avg_improvement = sum(
-                e.improvement_pct for e in successes if e.improvement_pct
-            ) / len(successes)
+            valid_improvements = [
+                e.improvement_pct for e in successes if e.improvement_pct is not None
+            ]
+            avg_improvement = (
+                sum(valid_improvements) / len(valid_improvements)
+                if valid_improvements
+                else 0.0
+            )
             run.conclusion = "PROGRESS_CONTINUING"
             run.conclusion_detail = (
                 f"Still making progress (avg {avg_improvement:.1f}% per success). "
@@ -467,6 +490,21 @@ class AgentMemory:
                 if exp.reasoning and exp.reasoning != "See crew output for details":
                     lines.append(f"  Reasoning: {exp.reasoning}")
                 lines.append(f"  Why it failed: {exp.insight}")
+            lines.append("")
+
+        # Proposals rejected by review panel
+        rejected = [
+            e for e in self.get_all_experiments() if e.result == "rejected_by_review"
+        ]
+        seen_hypotheses = set()
+        if rejected:
+            lines.append("### Proposals Rejected by Review Panel")
+            for exp in rejected[-5:]:
+                if exp.hypothesis in seen_hypotheses:
+                    continue
+                seen_hypotheses.add(exp.hypothesis)
+                lines.append(f"- **{exp.hypothesis}**")
+                lines.append(f"  Panel feedback: {exp.insight}")
             lines.append("")
 
         return "\n".join(lines)

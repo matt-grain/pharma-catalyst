@@ -4,6 +4,7 @@ HTML report generator with Plotly charts.
 Generates visual reports showing experiment progress and metrics.
 """
 
+import html
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,9 @@ def generate_run_report(
     baseline_score: float,
     experiments: list[dict],
     output_dir: Path,
+    model_name: str = "unknown",
+    gemini_tier: str = "paid",
+    review_panel_enabled: bool = False,
 ) -> Path:
     """
     Generate an HTML report for a run.
@@ -31,6 +35,9 @@ def generate_run_report(
         baseline_score: Starting baseline score
         experiments: List of experiment dicts with iteration, score_after, etc.
         output_dir: Directory to save the report
+        model_name: LLM model used (e.g. gemini/gemini-3-flash-preview)
+        gemini_tier: API tier (free or paid)
+        review_panel_enabled: Whether the AutoGen review panel was active
 
     Returns:
         Path to the generated HTML file
@@ -199,6 +206,22 @@ def generate_run_report(
         font={"family": "Arial, sans-serif"},
     )
 
+    # Review panel stats
+    review_verdicts = [
+        e.get("review_verdict") for e in experiments if e.get("review_verdict")
+    ]
+    review_approved = sum(1 for v in review_verdicts if v == "approved")
+    review_revised = sum(1 for v in review_verdicts if v == "revised")
+    review_rejected = sum(1 for v in review_verdicts if v == "rejected")
+    avg_confidence = 0.0
+    confidences = [
+        e.get("review_confidence")
+        for e in experiments
+        if e.get("review_confidence") is not None
+    ]
+    if confidences:
+        avg_confidence = sum(confidences) / len(confidences)
+
     # Generate experiments table HTML
     table_rows = ""
     for exp in experiments:
@@ -216,14 +239,40 @@ def generate_run_report(
         if len(exp.get("hypothesis", "")) > 80:
             hypothesis += "..."
 
+        # Review verdict badge
+        rv = exp.get("review_verdict")
+        if rv == "approved":
+            review_badge = '<span class="badge badge-approved">APPROVED</span>'
+        elif rv == "revised":
+            review_badge = '<span class="badge badge-revised">REVISED</span>'
+        elif rv == "rejected":
+            review_badge = '<span class="badge badge-rejected">REJECTED</span>'
+        else:
+            review_badge = '<span class="badge badge-na">N/A</span>'
+
+        review_conf = exp.get("review_confidence")
+        conf_str = f"{review_conf:.0%}" if review_conf is not None else ""
+
+        # Review feedback tooltip (escape LLM-generated text for HTML safety)
+        review_fb = html.escape(exp.get("review_feedback", ""))
+        concerns = exp.get("review_concerns", [])
+        tooltip = review_fb
+        if concerns:
+            tooltip += " | Concerns: " + "; ".join(html.escape(c) for c in concerns)
+
+        hypothesis_escaped = html.escape(hypothesis)
+        full_hypothesis_escaped = html.escape(exp.get("hypothesis", ""))
+        insight_escaped = html.escape(exp.get("insight", "N/A"))
+
         table_rows += f"""
         <tr>
             <td>{exp["iteration"]}</td>
             <td>{status_badge}</td>
             <td>{score_str}</td>
             <td>{imp_str}</td>
-            <td title="{exp.get("hypothesis", "")}">{hypothesis}</td>
-            <td>{exp.get("insight", "N/A")}</td>
+            <td title="{tooltip}">{review_badge} {conf_str}</td>
+            <td title="{full_hypothesis_escaped}">{hypothesis_escaped}</td>
+            <td>{insight_escaped}</td>
         </tr>
         """
 
@@ -311,12 +360,133 @@ def generate_run_report(
             margin-top: 30px;
             font-size: 0.9em;
         }}
+        .metadata-section {{
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }}
+        .metadata-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }}
+        .meta-item {{
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }}
+        .meta-label {{
+            font-size: 0.8em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .meta-value {{
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-top: 4px;
+        }}
+        .badge {{
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }}
+        .badge-approved {{ background: #d4edda; color: #155724; }}
+        .badge-revised {{ background: #fff3cd; color: #856404; }}
+        .badge-rejected {{ background: #f8d7da; color: #721c24; }}
+        .badge-na {{ background: #e2e3e5; color: #6c757d; }}
+        .review-summary {{
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }}
+        .review-stat {{
+            text-align: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }}
+        .review-stat-value {{
+            font-size: 1.5em;
+            font-weight: bold;
+        }}
+        .review-stat-label {{
+            font-size: 0.8em;
+            color: #6c757d;
+        }}
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🧪 {experiment_name.upper()} Experiment Report</h1>
         <p>Run #{run_id} | Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
+    </div>
+
+    <div class="metadata-section">
+        <h2>⚙️ Run Configuration</h2>
+        <div class="metadata-grid">
+            <div class="meta-item">
+                <div class="meta-label">LLM Model</div>
+                <div class="meta-value">{model_name}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">API Tier</div>
+                <div class="meta-value">{gemini_tier.upper()}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Pipeline</div>
+                <div class="meta-value">CrewAI (sequential)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Review Panel</div>
+                <div class="meta-value">{
+        "AutoGen GroupChat" if review_panel_enabled else "Disabled"
+    }</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Iterations</div>
+                <div class="meta-value">{len(experiments)}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Metric / Direction</div>
+                <div class="meta-value">{metric} ({direction.replace("_", " ")})</div>
+            </div>
+        </div>
+        {
+        ""
+        if not review_panel_enabled
+        else f'''
+        <h3 style="margin-top: 20px;">🧑‍⚖️ Review Panel Summary</h3>
+        <div class="review-summary">
+            <div class="review-stat">
+                <div class="review-stat-value" style="color: #28A745;">{review_approved}</div>
+                <div class="review-stat-label">Approved</div>
+            </div>
+            <div class="review-stat">
+                <div class="review-stat-value" style="color: #FFC107;">{review_revised}</div>
+                <div class="review-stat-label">Revised</div>
+            </div>
+            <div class="review-stat">
+                <div class="review-stat-value" style="color: #DC3545;">{review_rejected}</div>
+                <div class="review-stat-label">Rejected</div>
+            </div>
+            <div class="review-stat">
+                <div class="review-stat-value" style="color: #2E86AB;">{avg_confidence:.0%}</div>
+                <div class="review-stat-label">Avg Confidence</div>
+            </div>
+        </div>
+        <p style="color: #6c757d; font-size: 0.85em; margin-top: 8px;">
+            Panel: Statistician, Medicinal Chemist, Devil&rsquo;s Advocate, Team Memory Analyst, Pharma Ethics Reviewer &rarr; Moderator
+        </p>
+        '''
+    }
     </div>
 
     <div class="summary-cards">
@@ -355,6 +525,7 @@ def generate_run_report(
                     <th>Result</th>
                     <th>{metric}</th>
                     <th>Improvement</th>
+                    <th>Review</th>
                     <th>Hypothesis</th>
                     <th>Insight</th>
                 </tr>
@@ -436,6 +607,8 @@ def generate_from_memory(experiment: str, run_id: int | None = None) -> list[Pat
                     "hypothesis": exp.hypothesis,
                     "reasoning": exp.reasoning,
                     "insight": exp.insight,
+                    "review_verdict": getattr(exp, "review_verdict", None),
+                    "review_feedback": getattr(exp, "review_feedback", None),
                 }
             )
 

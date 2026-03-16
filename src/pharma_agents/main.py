@@ -16,9 +16,16 @@ from datetime import datetime
 
 from loguru import logger
 
-from .crew import PharmaAgentsCrew
+from .crew import PharmaAgentsCrew, HypothesisOutput
 from .tools.evaluate import run_training, log_experiment
-from .memory import AgentMemory, get_metric_name, is_better, compute_improvement_pct
+from .memory import (
+    AgentMemory,
+    get_metric_name,
+    get_metric_direction,
+    is_better,
+    compute_improvement_pct,
+)
+from .review_panel import run_review_panel, format_approved_hypothesis
 
 # Content truncation limits
 MAX_HYPOTHESIS_LENGTH = 200
@@ -26,14 +33,18 @@ MAX_REASONING_LENGTH = 300
 
 
 class TeeStream:
-    """Stream that writes to both stdout and a log file."""
+    """Stream that writes to both stdout and a log file.
+
+    Accepts an already-opened file handle (not a path) so the caller
+    controls the file lifecycle via a context manager.
+    """
 
     # Regex to strip ANSI escape codes
     ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
-    def __init__(self, original_stream, log_file: Path):
+    def __init__(self, original_stream, log_fh):
         self.original = original_stream
-        self.log_file = open(log_file, "a", encoding="utf-8")
+        self.log_fh = log_fh
         self._closed = False
 
     def write(self, data):
@@ -42,8 +53,8 @@ class TeeStream:
         if not self._closed:
             try:
                 clean_data = self.ANSI_ESCAPE.sub("", data)
-                self.log_file.write(clean_data)
-                self.log_file.flush()
+                self.log_fh.write(clean_data)
+                self.log_fh.flush()
             except (ValueError, OSError):
                 pass  # File closed or invalid, ignore late writes
 
@@ -51,31 +62,30 @@ class TeeStream:
         self.original.flush()
         if not self._closed:
             try:
-                self.log_file.flush()
+                self.log_fh.flush()
             except (ValueError, OSError):
                 pass
 
-    def close(self):
+    def detach(self):
+        """Mark as detached — stop writing to log but don't close the file handle."""
         self._closed = True
-        self.log_file.close()
-
-    def __del__(self):
-        """Cleanup file handle on garbage collection."""
-        if not self._closed:
-            self.close()
 
 
 @contextmanager
 def capture_stdout_to_log(log_file: Path):
-    """Context manager to tee stdout to log file."""
-    tee = TeeStream(sys.stdout, log_file)
-    old_stdout = sys.stdout
-    sys.stdout = tee
-    try:
-        yield
-    finally:
-        sys.stdout = old_stdout
-        tee.close()
+    """Context manager to tee stdout to log file.
+
+    Opens the file handle here so it's guaranteed to close on exit.
+    """
+    with open(log_file, "a", encoding="utf-8") as fh:
+        tee = TeeStream(sys.stdout, fh)
+        old_stdout = sys.stdout
+        sys.stdout = tee
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            tee.detach()
 
 
 # Configure loguru
@@ -386,7 +396,7 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
     return hypothesis, reasoning
 
 
-def run(iterations: int = 10) -> None:
+def run(iterations: int = 10, use_review_panel: bool = True) -> None:
     """
     Run the pharma-agents crew for multiple iterations.
 
@@ -461,8 +471,10 @@ def run(iterations: int = 10) -> None:
         logger.error(f"Baseline training failed: {baseline_result.error}")
         return
 
-    # After success check, rmse is guaranteed to be set
-    assert baseline_result.rmse is not None
+    # After success check, score is guaranteed to be set
+    if baseline_result.rmse is None:
+        logger.error("Baseline training returned no score despite success=True")
+        return
     baseline_score: float = baseline_result.rmse
     best_score: float = baseline_score
     logger.info(f"Baseline {metric}: {baseline_score:.4f}")
@@ -533,7 +545,7 @@ def run(iterations: int = 10) -> None:
         logger.info(f"Current best {metric}: {best_score:.4f}")
 
         # Prepare inputs for the crew
-        from .memory import get_metric_direction, get_baseline_config
+        from .memory import get_baseline_config
 
         config = get_baseline_config()
 
@@ -558,20 +570,88 @@ def run(iterations: int = 10) -> None:
             else "No previous experiments in this run",
             "agent_memory": memory.format_for_prompt(run_number),
             "existing_papers": existing_papers_str,
+            "approved_hypothesis": "",  # Set by review panel flow; empty in legacy flow
         }
 
         # Run the crew (capture stdout to log file)
-        # First iteration: use crew_with_archivist if needed (archivist runs async)
-        # Subsequent iterations: use regular crew
+        # Two flows: review panel (hypothesis → review → implement) or legacy single crew
+        verdict = None  # Set by review panel flow, None in legacy flow
         try:
-            if i == 0 and use_archivist_first_iter:
-                logger.info("Running crew with async archivist...")
-                with capture_stdout_to_log(log_file):
-                    result = crew.crew_with_archivist().kickoff(inputs=inputs)
+            if not use_review_panel:
+                # Legacy flow: single crew, no review
+                if i == 0 and use_archivist_first_iter:
+                    logger.info("Running crew with async archivist...")
+                    with capture_stdout_to_log(log_file):
+                        result = crew.crew_with_archivist().kickoff(inputs=inputs)
+                else:
+                    logger.info("Running agent crew...")
+                    with capture_stdout_to_log(log_file):
+                        result = crew.crew().kickoff(inputs=inputs)
             else:
-                logger.info("Running agent crew...")
+                # Review panel flow: hypothesis → review → implement
+                # Step 1: Run archivist if needed (first iteration only)
+                if i == 0 and use_archivist_first_iter:
+                    logger.info("Running archivist crew...")
+                    with capture_stdout_to_log(log_file):
+                        crew.archivist_crew().kickoff(inputs=inputs)
+
+                # Step 2: Generate hypothesis
+                logger.info("Running hypothesis crew...")
                 with capture_stdout_to_log(log_file):
-                    result = crew.crew().kickoff(inputs=inputs)
+                    hypothesis_result = crew.hypothesis_crew().kickoff(inputs=inputs)
+                hypothesis_text, reasoning_text = extract_hypothesis_from_result(
+                    hypothesis_result
+                )
+
+                # Step 3: Review panel gate
+                hypothesis_obj = HypothesisOutput(
+                    proposal=hypothesis_text,
+                    reasoning=reasoning_text,
+                    change_description="",
+                    literature_insight=None,
+                )
+                # Try to get richer structured output if available
+                for task_output in getattr(hypothesis_result, "tasks_output", []):
+                    pydantic_obj = getattr(task_output, "pydantic", None)
+                    if pydantic_obj and hasattr(pydantic_obj, "proposal"):
+                        hypothesis_obj = pydantic_obj
+                        break
+
+                verdict = run_review_panel(
+                    hypothesis=hypothesis_obj,
+                    experiment_context=memory.format_for_prompt(run_number),
+                    baseline_score=best_score,
+                    metric=metric,
+                    direction=get_metric_direction(),
+                )
+                logger.info(
+                    f"Review verdict: {verdict.decision} "
+                    f"(confidence: {verdict.confidence:.2f})"
+                )
+
+                if verdict.decision == "rejected":
+                    logger.warning(f"REVIEW PANEL REJECTED: {verdict.feedback}")
+                    memory.add_experiment(
+                        run=run_number,
+                        iteration=i + 1,
+                        hypothesis=hypothesis_text,
+                        reasoning=reasoning_text,
+                        result="rejected_by_review",
+                        score_before=best_score,
+                        score_after=None,
+                        insight=f"Review panel rejected: {verdict.feedback}",
+                        review_verdict=verdict.decision,
+                        review_feedback=verdict.feedback,
+                    )
+                    continue
+
+                # Step 4: Run implementation with approved/revised hypothesis
+                approved = format_approved_hypothesis(verdict, hypothesis_obj)
+                impl_inputs = {**inputs, "approved_hypothesis": approved}
+                logger.info("Running implementation crew with approved hypothesis...")
+                with capture_stdout_to_log(log_file):
+                    result = crew.implementation_crew().kickoff(inputs=impl_inputs)
+
             logger.info("Crew completed")
             logger.debug(f"Crew output: {result}")
         except Exception as e:
@@ -593,11 +673,16 @@ def run(iterations: int = 10) -> None:
                 logger.error("PERMANENT ERROR detected — aborting run")
                 break
 
-            # Rate limit — wait and retry
+            # Rate limit — use API's retryDelay if available, else default 60s
             rate_limit_markers = ["rate limit", "429", "quota", "resource exhausted"]
             if any(marker in error_msg for marker in rate_limit_markers):
-                logger.warning("Rate limit hit — waiting 60s before next iteration")
-                time.sleep(60)
+                # Parse retryDelay from API error (e.g. "'retryDelay': '31s'")
+                delay_match = re.search(r"retryDelay['\"]:\s*['\"](\d+)", error_msg)
+                wait_seconds = int(delay_match.group(1)) + 5 if delay_match else 60
+                logger.warning(
+                    f"Rate limit hit — waiting {wait_seconds}s before next iteration"
+                )
+                time.sleep(wait_seconds)
 
             continue
 
@@ -613,6 +698,10 @@ def run(iterations: int = 10) -> None:
             "rmse": eval_result.rmse,
             "success": eval_result.success,
             "recommendation": eval_result.recommendation,
+            "review_verdict": verdict.decision if verdict else None,
+            "review_confidence": verdict.confidence if verdict else None,
+            "review_feedback": verdict.feedback if verdict else None,
+            "review_concerns": verdict.concerns if verdict else [],
         }
         experiment_history.append(experiment_entry)
 
@@ -641,6 +730,8 @@ def run(iterations: int = 10) -> None:
                     score_before=best_score,
                     score_after=eval_result.rmse,
                     insight=f"Achieved {improvement:.1f}% improvement",
+                    review_verdict=verdict.decision if verdict else None,
+                    review_feedback=verdict.feedback if verdict else None,
                 )
 
                 best_score = eval_result.rmse
@@ -663,6 +754,8 @@ def run(iterations: int = 10) -> None:
                     score_before=best_score,
                     score_after=eval_result.rmse,
                     insight=f"No improvement ({metric} {eval_result.rmse:.4f} vs baseline {best_score:.4f})",
+                    review_verdict=verdict.decision if verdict else None,
+                    review_feedback=verdict.feedback if verdict else None,
                 )
 
                 git_revert_changes(worktree_path)
@@ -680,6 +773,8 @@ def run(iterations: int = 10) -> None:
                 score_before=best_score,
                 score_after=None,
                 insight=f"Training failed: {eval_result.error}",
+                review_verdict=verdict.decision if verdict else None,
+                review_feedback=verdict.feedback if verdict else None,
             )
 
             git_revert_changes(worktree_path)
@@ -702,7 +797,6 @@ def run(iterations: int = 10) -> None:
 
     # Generate HTML report with charts
     from .report import generate_run_report
-    from .memory import get_metric_direction
 
     report_path = generate_run_report(
         run_id=run_number,
@@ -712,6 +806,9 @@ def run(iterations: int = 10) -> None:
         baseline_score=baseline_score,
         experiments=experiment_history,
         output_dir=run_log_dir,
+        model_name=os.getenv("LLM_MODEL", "unknown"),
+        gemini_tier=os.getenv("GEMINI_TIER", "paid"),
+        review_panel_enabled=use_review_panel,
     )
     logger.info(f"Report:        {report_path}")
 
@@ -794,6 +891,9 @@ def promote(run_number: int, experiment: str | None = None) -> None:
     eval_result = run_training()
 
     # Update baseline.json - preserve metric config, update score
+    if not baseline_json.exists():
+        logger.error(f"baseline.json not found at {baseline_json}")
+        return
     existing_config = json.loads(baseline_json.read_text())
 
     baseline_data = {
@@ -806,16 +906,24 @@ def promote(run_number: int, experiment: str | None = None) -> None:
     baseline_json.write_text(json.dumps(baseline_data, indent=2))
 
     # Commit the new baseline
-    subprocess.run(
+    add_result = subprocess.run(
         ["git", "add", str(baseline), str(baseline_json)],
         cwd=project_root,
         capture_output=True,
+        text=True,
     )
-    subprocess.run(
+    if add_result.returncode != 0:
+        logger.error(f"git add failed: {add_result.stderr}")
+        return
+    commit_result = subprocess.run(
         ["git", "commit", "-m", f"Update baseline from {branch_name}"],
         cwd=project_root,
         capture_output=True,
+        text=True,
     )
+    if commit_result.returncode != 0:
+        logger.error(f"git commit failed: {commit_result.stderr}")
+        return
 
     logger.success(f"Promoted {branch_name} to main!")
     logger.info(f"New baseline {eval_result.metric}: {eval_result.rmse:.4f}")
@@ -841,10 +949,16 @@ if __name__ == "__main__":
         default=int(os.environ.get("MAX_ITERATIONS", "5")),
         help="Number of iterations (default: 5 or MAX_ITERATIONS env var)",
     )
+    parser.add_argument(
+        "--no-review",
+        action="store_true",
+        default=os.environ.get("ENABLE_REVIEW_PANEL", "true").lower() == "false",
+        help="Skip AutoGen review panel (faster, less validation)",
+    )
     args = parser.parse_args()
 
     # Set experiment before importing anything that uses it
     os.environ["PHARMA_EXPERIMENT"] = args.experiment
     print(f"Running experiment: {args.experiment}")
 
-    run(iterations=args.iterations)
+    run(iterations=args.iterations, use_review_panel=not args.no_review)

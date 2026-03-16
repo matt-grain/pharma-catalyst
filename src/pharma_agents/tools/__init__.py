@@ -11,9 +11,11 @@ from .literature import (
 from .skills import SkillLoaderTool
 from .training import (
     CodeCheckTool,
+    EditTrainPyTool,
     InstallPackageTool,
     ReadTrainPyTool,
     RunTrainPyTool,
+    SearchTrainPyTool,
     WriteTrainPyTool,
 )
 
@@ -31,6 +33,8 @@ __all__ = [
     # Training tools
     "ReadTrainPyTool",
     "WriteTrainPyTool",
+    "EditTrainPyTool",
+    "SearchTrainPyTool",
     "CodeCheckTool",
     "RunTrainPyTool",
     "InstallPackageTool",

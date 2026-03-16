@@ -240,6 +240,82 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 
 ---
 
+## The Review Panel (AutoGen)
+
+Between hypothesis and implementation, an adversarial expert panel debates the proposal using AutoGen's GroupChat. This catches bad hypotheses before committing to 3-5 minutes of model training.
+
+**Why a separate framework?** CrewAI excels at sequential task pipelines. But multi-perspective debate — agents arguing over the same topic, building on each other's points — is a fundamentally different interaction pattern. AutoGen's GroupChat is purpose-built for this.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     AUTOGEN REVIEW PANEL (GroupChat)                        │
+│                                                                             │
+│  Hypothesis ──────────────────────────────────────────────────────►         │
+│                                                                             │
+│  Round 1 (each expert speaks once):                                        │
+│                                                                             │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                  │
+│  │ STATISTICIAN  │  │   MEDICINAL   │  │    DEVIL'S    │                  │
+│  │               │  │    CHEMIST    │  │   ADVOCATE    │                  │
+│  ├───────────────┤  ├───────────────┤  ├───────────────┤                  │
+│  │ Sample size   │  │ SAR validity  │  │ ML pitfalls   │                  │
+│  │ Overfitting   │  │ Descriptors   │  │ Feature bloat │                  │
+│  │ Stat. power   │  │ Chemical sense│  │ Time blowup   │                  │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                  │
+│          │                  │                   │                           │
+│  ┌───────┴──────┐   ┌──────┴───────┐                                      │
+│  │    TEAM      │   │    PHARMA    │                                      │
+│  │   MEMORY     │   │    ETHICS    │                                      │
+│  │   ANALYST    │   │   REVIEWER   │                                      │
+│  ├──────────────┤   ├──────────────┤                                      │
+│  │ Duplicates?  │   │ Bias risk    │                                      │
+│  │ Local optima │   │ Explainability│                                     │
+│  │ Past results │   │ Patient safety│                                     │
+│  └──────────────┘   └──────┬───────┘                                      │
+│                             │                                              │
+│  Round 2 (experts respond to each other's points)...                       │
+│                             │                                              │
+│                             ▼                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │                        MODERATOR                                      │ │
+│  │  Summarizes debate, issues structured verdict:                        │ │
+│  │                                                                       │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐  │ │
+│  │  │  { "decision": "approved" | "revised" | "rejected",           │  │ │
+│  │  │    "feedback": "panel summary",                                │  │ │
+│  │  │    "confidence": 0.85,                                         │  │ │
+│  │  │    "concerns": ["...", "..."] }                                │  │ │
+│  │  └─────────────────────────────────────────────────────────────────┘  │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+│                             │                                              │
+│              ┌──────────────┼──────────────┐                               │
+│              ▼              ▼              ▼                                │
+│          APPROVED        REVISED       REJECTED                            │
+│          (proceed)    (modified proposal)  (skip, feedback                  │
+│                        (proceed)       stored in memory)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Panel Members
+
+| Agent | Focus | Key Questions |
+|-------|-------|---------------|
+| **Statistician** | Statistical validity | Sample size, overfitting risk, cross-validation strategy. "Will this produce a statistically meaningful improvement, or are we chasing noise?" |
+| **Medicinal Chemist** | Domain relevance | Chemical plausibility of features/descriptors, structure-activity relationships. "Does this make chemical sense?" |
+| **Devil's Advocate** | Critical review | ML pitfalls, training time blowup, feature explosion, implementation risk. "What is the strongest argument against this?" |
+| **Team Memory Analyst** | Experiment history | Duplicate detection, local optimum awareness, trajectory analysis. "Have we tried this before? Are we going in circles?" |
+| **Pharma Ethics Reviewer** | Responsible AI | Model interpretability for regulators, bias in molecular datasets, patient safety, GxP reproducibility. "Would this pass regulatory scrutiny?" |
+| **Moderator** | Final verdict | Summarizes debate, issues structured JSON verdict (approved/revised/rejected) |
+
+### Configuration
+
+- **Agents defined in:** `src/pharma_agents/review_agents.yaml` (editable without touching Python)
+- **GroupChat:** round-robin speaker selection, 2 rounds of debate + 1 moderator summary
+- **Fallback:** if AG2 errors or moderator output is unparseable, defaults to `approved` with low confidence (never blocks the pipeline)
+- **Bypass:** `--no-review` flag or `ENABLE_REVIEW_PANEL=false` skips the panel entirely
+
+---
+
 ## Crew Workflow
 
 ```
@@ -349,4 +425,4 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 
 ---
 
-*Built with CrewAI. Powered by Gemini. Optimized by curiosity.*
+*Built with CrewAI + AutoGen. Powered by Gemini. Optimized by curiosity.*
