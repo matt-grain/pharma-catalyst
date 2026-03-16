@@ -207,12 +207,18 @@ def generate_run_report(
     )
 
     # Review panel stats
-    review_verdicts = [e.get("review_verdict") for e in experiments if e.get("review_verdict")]
+    review_verdicts = [
+        e.get("review_verdict") for e in experiments if e.get("review_verdict")
+    ]
     review_approved = sum(1 for v in review_verdicts if v == "approved")
     review_revised = sum(1 for v in review_verdicts if v == "revised")
     review_rejected = sum(1 for v in review_verdicts if v == "rejected")
     avg_confidence = 0.0
-    confidences = [e.get("review_confidence") for e in experiments if e.get("review_confidence") is not None]
+    confidences = [
+        e.get("review_confidence")
+        for e in experiments
+        if e.get("review_confidence") is not None
+    ]
     if confidences:
         avg_confidence = sum(confidences) / len(confidences)
 
@@ -440,7 +446,9 @@ def generate_run_report(
             </div>
             <div class="meta-item">
                 <div class="meta-label">Review Panel</div>
-                <div class="meta-value">{"AutoGen GroupChat" if review_panel_enabled else "Disabled"}</div>
+                <div class="meta-value">{
+        "AutoGen GroupChat" if review_panel_enabled else "Disabled"
+    }</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Iterations</div>
@@ -451,7 +459,10 @@ def generate_run_report(
                 <div class="meta-value">{metric} ({direction.replace("_", " ")})</div>
             </div>
         </div>
-        {"" if not review_panel_enabled else f'''
+        {
+        ""
+        if not review_panel_enabled
+        else f'''
         <h3 style="margin-top: 20px;">🧑‍⚖️ Review Panel Summary</h3>
         <div class="review-summary">
             <div class="review-stat">
@@ -474,7 +485,8 @@ def generate_run_report(
         <p style="color: #6c757d; font-size: 0.85em; margin-top: 8px;">
             Panel: Statistician, Medicinal Chemist, Devil&rsquo;s Advocate, Team Memory Analyst, Pharma Ethics Reviewer &rarr; Moderator
         </p>
-        '''}
+        '''
+    }
     </div>
 
     <div class="summary-cards">

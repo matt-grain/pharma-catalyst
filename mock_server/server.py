@@ -67,6 +67,7 @@ def _looks_like_json(text: str) -> bool:
 def _extract_json(text: str) -> str:
     """Extract the JSON object from text that may contain surrounding prose."""
     import re
+
     stripped = text.strip()
     # Try: after "Final Answer:"
     if "Final Answer:" in stripped:
@@ -87,6 +88,7 @@ def _extract_json(text: str) -> str:
                 if depth == 0:
                     return stripped[brace_start : i + 1]
     return stripped
+
 
 # Serialize terminal I/O across concurrent requests
 _input_lock = Lock()
@@ -114,8 +116,8 @@ def _box(title: str, lines: list[str]) -> str:
     parts = [f"\n╭{'─' * left}{header}{'─' * right}╮"]
     for line in lines:
         while len(line) > WIDTH - 4:
-            parts.append(f"│  {line[:WIDTH - 4]:<{WIDTH - 2}}│")
-            line = line[WIDTH - 4:]
+            parts.append(f"│  {line[: WIDTH - 4]:<{WIDTH - 2}}│")
+            line = line[WIDTH - 4 :]
         parts.append(f"│  {line:<{WIDTH - 2}}│")
     parts.append(f"╰{'─' * WIDTH}╯")
     return "\n".join(parts)
@@ -137,7 +139,9 @@ def _format_messages(messages: list[dict]) -> list[str]:
     return lines
 
 
-def _terminal_response(req_id: int, messages: list[dict], model: str, tools: list) -> str:
+def _terminal_response(
+    req_id: int, messages: list[dict], model: str, tools: list
+) -> str:
     """Get response via terminal input (original mode)."""
     # Display the request
     header_lines = [
@@ -151,7 +155,7 @@ def _terminal_response(req_id: int, messages: list[dict], model: str, tools: lis
     # Show suggested canned responses
     suggestions = match_canned_responses(messages)
     if suggestions:
-        print(f"\n📋 Suggested canned responses:")
+        print("\n📋 Suggested canned responses:")
         for i, s in enumerate(suggestions[:5], 1):
             preview = s["response"][:80].replace("\n", " ")
             print(f"   {i}. [{s['id']}] {s['label']} — {preview}...")
@@ -159,7 +163,9 @@ def _terminal_response(req_id: int, messages: list[dict], model: str, tools: lis
     # Prompt for response
     print(f"\n💬 Type your response for request #{req_id}")
     print("   (multi-line: end with an empty line, or 'EOF' on its own line)")
-    print("   Shortcuts: 'a' = approve, 'r' = reject, '1'-'5' = use suggested canned response")
+    print(
+        "   Shortcuts: 'a' = approve, 'r' = reject, '1'-'5' = use suggested canned response"
+    )
     print("─" * WIDTH)
 
     response_lines: list[str] = []
@@ -176,19 +182,23 @@ def _terminal_response(req_id: int, messages: list[dict], model: str, tools: lis
 
     # Shortcuts
     if raw_response == "a":
-        raw_response = json.dumps({
-            "decision": "approved",
-            "feedback": "Approved by human reviewer.",
-            "confidence": 1.0,
-            "concerns": [],
-        })
+        raw_response = json.dumps(
+            {
+                "decision": "approved",
+                "feedback": "Approved by human reviewer.",
+                "confidence": 1.0,
+                "concerns": [],
+            }
+        )
     elif raw_response == "r":
-        raw_response = json.dumps({
-            "decision": "rejected",
-            "feedback": "Rejected by human reviewer.",
-            "confidence": 1.0,
-            "concerns": ["Human reviewer rejected this proposal"],
-        })
+        raw_response = json.dumps(
+            {
+                "decision": "rejected",
+                "feedback": "Rejected by human reviewer.",
+                "confidence": 1.0,
+                "concerns": ["Human reviewer rejected this proposal"],
+            }
+        )
     elif raw_response in ("1", "2", "3", "4", "5") and suggestions:
         idx = int(raw_response) - 1
         if idx < len(suggestions):
@@ -202,7 +212,9 @@ def _terminal_response(req_id: int, messages: list[dict], model: str, tools: lis
     return raw_response
 
 
-def _mailbox_response(req_id: int, messages: list[dict], model: str, tools: list) -> str:
+def _mailbox_response(
+    req_id: int, messages: list[dict], model: str, tools: list
+) -> str:
     """Queue request and wait for response via mailbox API."""
     event = Event()
     entry = {
@@ -217,10 +229,15 @@ def _mailbox_response(req_id: int, messages: list[dict], model: str, tools: list
     with _pending_lock:
         _pending[req_id] = entry
 
-    print(_box(f"📬 Request #{req_id} queued (mailbox)", [
-        f"Model: {model}  |  Messages: {len(messages)}",
-        f"Waiting for response via POST /mailbox/{req_id}",
-    ]))
+    print(
+        _box(
+            f"📬 Request #{req_id} queued (mailbox)",
+            [
+                f"Model: {model}  |  Messages: {len(messages)}",
+                f"Waiting for response via POST /mailbox/{req_id}",
+            ],
+        )
+    )
 
     # Block until a response is submitted via the API
     event.wait()
@@ -250,13 +267,23 @@ async def chat_completions(request: Request) -> JSONResponse:
 
     if _mailbox_mode:
         import asyncio
+
         raw_response = await asyncio.to_thread(
-            _mailbox_response, req_id, messages, model, tools,
+            _mailbox_response,
+            req_id,
+            messages,
+            model,
+            tools,
         )
     else:
         import asyncio
+
         raw_response = await asyncio.to_thread(
-            _terminal_response, req_id, messages, model, tools,
+            _terminal_response,
+            req_id,
+            messages,
+            model,
+            tools,
         )
 
     # Build OpenAI-compatible response
@@ -292,24 +319,26 @@ async def chat_completions(request: Request) -> JSONResponse:
         }
         finish_reason = "stop"
 
-    return JSONResponse({
-        "id": completion_id,
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "message": message,
-                "finish_reason": finish_reason,
-            }
-        ],
-        "usage": {
-            "prompt_tokens": sum(len(m.get("content", "")) // 4 for m in messages),
-            "completion_tokens": len(raw_response) // 4,
-            "total_tokens": 0,
-        },
-    })
+    return JSONResponse(
+        {
+            "id": completion_id,
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": message,
+                    "finish_reason": finish_reason,
+                }
+            ],
+            "usage": {
+                "prompt_tokens": sum(len(m.get("content", "")) // 4 for m in messages),
+                "completion_tokens": len(raw_response) // 4,
+                "total_tokens": 0,
+            },
+        }
+    )
 
 
 # ── Mailbox API ───────────────────────────────────────────────────────
@@ -322,16 +351,18 @@ async def list_pending() -> JSONResponse:
         items = []
         for req_id, entry in _pending.items():
             last_msg = entry["messages"][-1] if entry["messages"] else {}
-            items.append({
-                "request_id": req_id,
-                "model": entry["model"],
-                "message_count": len(entry["messages"]),
-                "tools": entry["tools"],
-                "last_role": last_msg.get("role", ""),
-                "last_name": last_msg.get("name", ""),
-                "preview": (last_msg.get("content", ""))[:200],
-                "age_seconds": round(time.time() - entry["timestamp"], 1),
-            })
+            items.append(
+                {
+                    "request_id": req_id,
+                    "model": entry["model"],
+                    "message_count": len(entry["messages"]),
+                    "tools": entry["tools"],
+                    "last_role": last_msg.get("role", ""),
+                    "last_name": last_msg.get("name", ""),
+                    "preview": (last_msg.get("content", ""))[:200],
+                    "age_seconds": round(time.time() - entry["timestamp"], 1),
+                }
+            )
     return JSONResponse({"pending": items, "count": len(items)})
 
 
@@ -341,20 +372,28 @@ async def get_pending_request(request_id: int) -> JSONResponse:
     with _pending_lock:
         entry = _pending.get(request_id)
         if not entry:
-            raise HTTPException(404, f"Request #{request_id} not found or already answered")
+            raise HTTPException(
+                404, f"Request #{request_id} not found or already answered"
+            )
         # Suggest canned responses
         suggestions = match_canned_responses(entry["messages"])
-        return JSONResponse({
-            "request_id": request_id,
-            "model": entry["model"],
-            "messages": entry["messages"],
-            "tools": entry["tools"],
-            "age_seconds": round(time.time() - entry["timestamp"], 1),
-            "suggested_canned": [
-                {"id": s["id"], "label": s["label"], "response_preview": s["response"][:200]}
-                for s in suggestions[:5]
-            ],
-        })
+        return JSONResponse(
+            {
+                "request_id": request_id,
+                "model": entry["model"],
+                "messages": entry["messages"],
+                "tools": entry["tools"],
+                "age_seconds": round(time.time() - entry["timestamp"], 1),
+                "suggested_canned": [
+                    {
+                        "id": s["id"],
+                        "label": s["label"],
+                        "response_preview": s["response"][:200],
+                    }
+                    for s in suggestions[:5]
+                ],
+            }
+        )
 
 
 class MailboxResponse(BaseModel):
@@ -368,7 +407,9 @@ async def submit_response(request_id: int, body: MailboxResponse) -> JSONRespons
     with _pending_lock:
         entry = _pending.get(request_id)
         if not entry:
-            raise HTTPException(404, f"Request #{request_id} not found or already answered")
+            raise HTTPException(
+                404, f"Request #{request_id} not found or already answered"
+            )
 
     # Resolve response text
     if body.canned_id:
@@ -385,11 +426,13 @@ async def submit_response(request_id: int, body: MailboxResponse) -> JSONRespons
     entry["response"] = response_text
     entry["event"].set()
 
-    return JSONResponse({
-        "status": "delivered",
-        "request_id": request_id,
-        "response_preview": response_text[:200],
-    })
+    return JSONResponse(
+        {
+            "status": "delivered",
+            "request_id": request_id,
+            "response_preview": response_text[:200],
+        }
+    )
 
 
 # ── Canned Responses API ─────────────────────────────────────────────
@@ -398,18 +441,20 @@ async def submit_response(request_id: int, body: MailboxResponse) -> JSONRespons
 @app.get("/canned")
 async def list_canned() -> JSONResponse:
     """List all available canned responses."""
-    return JSONResponse({
-        "canned": [
-            {
-                "id": c["id"],
-                "label": c["label"],
-                "context_hint": c["context_hint"],
-                "response_preview": c["response"][:200],
-            }
-            for c in CANNED_RESPONSES
-        ],
-        "count": len(CANNED_RESPONSES),
-    })
+    return JSONResponse(
+        {
+            "canned": [
+                {
+                    "id": c["id"],
+                    "label": c["label"],
+                    "context_hint": c["context_hint"],
+                    "response_preview": c["response"][:200],
+                }
+                for c in CANNED_RESPONSES
+            ],
+            "count": len(CANNED_RESPONSES),
+        }
+    )
 
 
 # ── Standard endpoints ───────────────────────────────────────────────
@@ -418,11 +463,13 @@ async def list_canned() -> JSONResponse:
 @app.get("/v1/models")
 async def list_models() -> JSONResponse:
     """Fake models endpoint for litellm compatibility."""
-    return JSONResponse({
-        "data": [
-            {"id": "mock-model", "object": "model", "owned_by": "mock-server"},
-        ]
-    })
+    return JSONResponse(
+        {
+            "data": [
+                {"id": "mock-model", "object": "model", "owned_by": "mock-server"},
+            ]
+        }
+    )
 
 
 @app.get("/health")
@@ -467,16 +514,21 @@ def main() -> None:
         ]
     )
 
-    print(_box("🧪 Mock LLM Mailbox Server", [
-        f"Listening on http://localhost:{port}/v1",
-        "",
-        *mode_info,
-        "",
-        "Configure .env:",
-        "  LLM_MODEL=openai/mock-model",
-        "  OPENAI_API_KEY=mock-key",
-        f"  OPENAI_API_BASE=http://localhost:{port}/v1",
-    ]))
+    print(
+        _box(
+            "🧪 Mock LLM Mailbox Server",
+            [
+                f"Listening on http://localhost:{port}/v1",
+                "",
+                *mode_info,
+                "",
+                "Configure .env:",
+                "  LLM_MODEL=openai/mock-model",
+                "  OPENAI_API_KEY=mock-key",
+                f"  OPENAI_API_BASE=http://localhost:{port}/v1",
+            ],
+        )
+    )
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 

@@ -209,7 +209,7 @@ class TestWriteTrainPyDoubleEncoding:
             "import numpy as np\n\n"
             "def train(verbose=True):\n"
             "    score = 0.85\n"
-            '    if verbose:\n'
+            "    if verbose:\n"
             '        print(f"Score: {score:.4f}")\n'
             '        print(f"Samples: {100}")\n'
             "    return score\n"

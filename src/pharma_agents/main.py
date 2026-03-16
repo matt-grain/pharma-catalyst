@@ -18,7 +18,13 @@ from loguru import logger
 
 from .crew import PharmaAgentsCrew, HypothesisOutput
 from .tools.evaluate import run_training, log_experiment
-from .memory import AgentMemory, get_metric_name, get_metric_direction, is_better, compute_improvement_pct
+from .memory import (
+    AgentMemory,
+    get_metric_name,
+    get_metric_direction,
+    is_better,
+    compute_improvement_pct,
+)
 from .review_panel import run_review_panel, format_approved_hypothesis
 
 # Content truncation limits
@@ -673,7 +679,9 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
                 # Parse retryDelay from API error (e.g. "'retryDelay': '31s'")
                 delay_match = re.search(r"retryDelay['\"]:\s*['\"](\d+)", error_msg)
                 wait_seconds = int(delay_match.group(1)) + 5 if delay_match else 60
-                logger.warning(f"Rate limit hit — waiting {wait_seconds}s before next iteration")
+                logger.warning(
+                    f"Rate limit hit — waiting {wait_seconds}s before next iteration"
+                )
                 time.sleep(wait_seconds)
 
             continue

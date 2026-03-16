@@ -304,10 +304,7 @@ class SearchTrainPyTool(BaseTool):
         if not matches:
             return f"No matches for '{pattern}' in train.py ({len(lines)} lines)."
 
-        return (
-            f"Found {len(matches)} match(es) for '{pattern}':\n"
-            + "\n".join(matches)
-        )
+        return f"Found {len(matches)} match(es) for '{pattern}':\n" + "\n".join(matches)
 
 
 class CodeCheckTool(BaseTool):

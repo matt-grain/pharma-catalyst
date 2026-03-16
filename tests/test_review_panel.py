@@ -66,7 +66,7 @@ def test_review_verdict_invalid_decision():
 
 
 def test_parse_verdict_from_json_with_code_block():
-    text = '''Here is my verdict:
+    text = """Here is my verdict:
 ```json
 {
     "decision": "approved",
@@ -74,7 +74,7 @@ def test_parse_verdict_from_json_with_code_block():
     "confidence": 0.85,
     "concerns": ["minor risk"]
 }
-```'''
+```"""
     verdict = _parse_verdict_from_json(text)
     assert verdict is not None
     assert verdict.decision == "approved"
@@ -108,7 +108,9 @@ def test_parse_verdict_from_text_approved():
 
 
 def test_parse_verdict_from_text_rejected():
-    verdict = _parse_verdict_from_text("This proposal should be rejected due to data leakage")
+    verdict = _parse_verdict_from_text(
+        "This proposal should be rejected due to data leakage"
+    )
     assert verdict.decision == "rejected"
 
 

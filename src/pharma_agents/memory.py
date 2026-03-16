@@ -264,9 +264,13 @@ class AgentMemory:
         # Track consecutive failures
         if result == "success":
             run_memory.consecutive_failures = 0
-            if score_after is not None and is_better(score_after, run_memory.best_score):
+            if score_after is not None and is_better(
+                score_after, run_memory.best_score
+            ):
                 run_memory.best_score = score_after
-            if score_after is not None and is_better(score_after, self.global_best_score):
+            if score_after is not None and is_better(
+                score_after, self.global_best_score
+            ):
                 self.global_best_score = score_after
         else:
             run_memory.consecutive_failures += 1

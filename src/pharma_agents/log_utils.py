@@ -20,11 +20,13 @@ def log_box(title: str, lines: list[str], width: int = 120, emoji: str = "") -> 
     for line in lines:
         # Wrap long lines
         while len(line) > width - 4:
-            parts.append(f"│  {line[:width - 4]:<{width - 2}}│")
-            line = line[width - 4:]
+            parts.append(f"│  {line[: width - 4]:<{width - 2}}│")
+            line = line[width - 4 :]
         parts.append(f"│  {line:<{width - 2}}│")
-    parts.extend([
-        f"│{' ' * width}│",
-        f"╰{'─' * width}╯",
-    ])
+    parts.extend(
+        [
+            f"│{' ' * width}│",
+            f"╰{'─' * width}╯",
+        ]
+    )
     return "\n".join(parts)

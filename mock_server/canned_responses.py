@@ -26,23 +26,29 @@ CANNED_RESPONSES: list[CannedResponse] = [
         "id": "hypothesis_1",
         "label": "Hypothesis: Add RDKit descriptors",
         "context_hint": "hypothesis|proposal|Research Scientist|improvement",
-        "response": json.dumps({
-            "proposal": "Add RDKit molecular descriptors (LogP, TPSA, MolWt, NumHDonors, NumHAcceptors, NumRotatableBonds) as features alongside Morgan fingerprints",
-            "reasoning": "Morgan fingerprints capture substructural patterns but miss global molecular properties. Adding physicochemical descriptors provides complementary information about drug-likeness and membrane permeability that are known to correlate with toxicity endpoints.",
-            "change_description": "In train.py, after computing Morgan fingerprints, compute 6 RDKit descriptors per molecule and concatenate them as additional feature columns.",
-            "literature_insight": "Multiple QSAR studies show that combining fingerprints with physicochemical descriptors improves prediction accuracy for ADMET endpoints (Mayr et al. 2016, Wu et al. 2018).",
-        }, indent=2),
+        "response": json.dumps(
+            {
+                "proposal": "Add RDKit molecular descriptors (LogP, TPSA, MolWt, NumHDonors, NumHAcceptors, NumRotatableBonds) as features alongside Morgan fingerprints",
+                "reasoning": "Morgan fingerprints capture substructural patterns but miss global molecular properties. Adding physicochemical descriptors provides complementary information about drug-likeness and membrane permeability that are known to correlate with toxicity endpoints.",
+                "change_description": "In train.py, after computing Morgan fingerprints, compute 6 RDKit descriptors per molecule and concatenate them as additional feature columns.",
+                "literature_insight": "Multiple QSAR studies show that combining fingerprints with physicochemical descriptors improves prediction accuracy for ADMET endpoints (Mayr et al. 2016, Wu et al. 2018).",
+            },
+            indent=2,
+        ),
     },
     {
         "id": "hypothesis_2",
         "label": "Hypothesis: Switch to Random Forest",
         "context_hint": "hypothesis|proposal|Research Scientist",
-        "response": json.dumps({
-            "proposal": "Replace the current model with a Random Forest classifier with 500 trees and class_weight='balanced'",
-            "reasoning": "The current model may underperform on imbalanced toxicity datasets. Random Forest with balanced class weights handles class imbalance natively and provides feature importance for interpretability.",
-            "change_description": "In train.py, replace the model initialization with RandomForestClassifier(n_estimators=500, class_weight='balanced', random_state=42, n_jobs=-1).",
-            "literature_insight": "Random Forests remain competitive baselines for molecular property prediction, especially with tabular features (Sheridan 2013).",
-        }, indent=2),
+        "response": json.dumps(
+            {
+                "proposal": "Replace the current model with a Random Forest classifier with 500 trees and class_weight='balanced'",
+                "reasoning": "The current model may underperform on imbalanced toxicity datasets. Random Forest with balanced class weights handles class imbalance natively and provides feature importance for interpretability.",
+                "change_description": "In train.py, replace the model initialization with RandomForestClassifier(n_estimators=500, class_weight='balanced', random_state=42, n_jobs=-1).",
+                "literature_insight": "Random Forests remain competitive baselines for molecular property prediction, especially with tabular features (Sheridan 2013).",
+            },
+            indent=2,
+        ),
     },
     # ── Review Panel: Statistician ────────────────────────────────────
     {
@@ -155,46 +161,55 @@ CANNED_RESPONSES: list[CannedResponse] = [
         "id": "moderator_approve",
         "label": "Moderator: APPROVE",
         "context_hint": "Moderator|verdict|summarize|decision",
-        "response": json.dumps({
-            "decision": "approved",
-            "feedback": "The panel finds this proposal well-grounded. The Statistician confirms adequate sample size, the Chemist validates the domain relevance of proposed descriptors, and the Devil's Advocate raised only minor implementation concerns. Proceed with careful handling of invalid SMILES.",
-            "confidence": 0.82,
-            "concerns": [
-                "Ensure NaN handling for invalid SMILES in descriptor computation",
-                "Monitor feature correlation to confirm descriptors add non-redundant information",
-            ],
-        }, indent=2),
+        "response": json.dumps(
+            {
+                "decision": "approved",
+                "feedback": "The panel finds this proposal well-grounded. The Statistician confirms adequate sample size, the Chemist validates the domain relevance of proposed descriptors, and the Devil's Advocate raised only minor implementation concerns. Proceed with careful handling of invalid SMILES.",
+                "confidence": 0.82,
+                "concerns": [
+                    "Ensure NaN handling for invalid SMILES in descriptor computation",
+                    "Monitor feature correlation to confirm descriptors add non-redundant information",
+                ],
+            },
+            indent=2,
+        ),
     },
     {
         "id": "moderator_revise",
         "label": "Moderator: REVISE",
         "context_hint": "Moderator|verdict|summarize|decision",
-        "response": json.dumps({
-            "decision": "revised",
-            "revised_proposal": "Add RDKit descriptors BUT normalize all features to [0,1] range before concatenation, and add a feature correlation check to drop descriptors with >0.95 correlation to existing fingerprint features.",
-            "revised_reasoning": "The Devil's Advocate correctly identified that mixing binary and continuous features without normalization biases tree-based models. Adding normalization addresses this while preserving the chemically sound feature set.",
-            "feedback": "The core idea is chemically sound but needs normalization and correlation checking to avoid the pitfalls identified by the Devil's Advocate.",
-            "confidence": 0.75,
-            "concerns": [
-                "Raw concatenation of binary and continuous features causes scale bias",
-                "Possible redundancy with existing fingerprint bits",
-            ],
-        }, indent=2),
+        "response": json.dumps(
+            {
+                "decision": "revised",
+                "revised_proposal": "Add RDKit descriptors BUT normalize all features to [0,1] range before concatenation, and add a feature correlation check to drop descriptors with >0.95 correlation to existing fingerprint features.",
+                "revised_reasoning": "The Devil's Advocate correctly identified that mixing binary and continuous features without normalization biases tree-based models. Adding normalization addresses this while preserving the chemically sound feature set.",
+                "feedback": "The core idea is chemically sound but needs normalization and correlation checking to avoid the pitfalls identified by the Devil's Advocate.",
+                "confidence": 0.75,
+                "concerns": [
+                    "Raw concatenation of binary and continuous features causes scale bias",
+                    "Possible redundancy with existing fingerprint bits",
+                ],
+            },
+            indent=2,
+        ),
     },
     {
         "id": "moderator_reject",
         "label": "Moderator: REJECT",
         "context_hint": "Moderator|verdict|summarize|decision",
-        "response": json.dumps({
-            "decision": "rejected",
-            "feedback": "The panel identified fundamental issues: this is a near-duplicate of a previously tried approach that yielded negligible improvement, and the implementation lacks normalization and feature selection. The team should explore a genuinely different direction.",
-            "confidence": 0.85,
-            "concerns": [
-                "Near-duplicate of iteration 2 with marginal results",
-                "No normalization strategy for heterogeneous features",
-                "No feature selection to manage curse of dimensionality",
-            ],
-        }, indent=2),
+        "response": json.dumps(
+            {
+                "decision": "rejected",
+                "feedback": "The panel identified fundamental issues: this is a near-duplicate of a previously tried approach that yielded negligible improvement, and the implementation lacks normalization and feature selection. The team should explore a genuinely different direction.",
+                "confidence": 0.85,
+                "concerns": [
+                    "Near-duplicate of iteration 2 with marginal results",
+                    "No normalization strategy for heterogeneous features",
+                    "No feature selection to manage curse of dimensionality",
+                ],
+            },
+            indent=2,
+        ),
     },
     # ── Implementation Agent ──────────────────────────────────────────
     {

@@ -246,12 +246,18 @@ def run_review_panel(
     )
 
     agents_list = ", ".join(str(a.name) for a in group_chat.agents)
-    print(log_box("🧪 Review Panel Started", [
-        "AutoGen Expert Review Panel",
-        f"Agents: {agents_list}",
-        f"Max Rounds: {get_max_rounds()}",
-        f"Proposal: {hypothesis.proposal[:80]}...",
-    ], emoji="🧪"))
+    print(
+        log_box(
+            "🧪 Review Panel Started",
+            [
+                "AutoGen Expert Review Panel",
+                f"Agents: {agents_list}",
+                f"Max Rounds: {get_max_rounds()}",
+                f"Proposal: {hypothesis.proposal[:80]}...",
+            ],
+            emoji="🧪",
+        )
+    )
     logger.info("Starting AutoGen review panel debate...")
 
     debate_error = None
@@ -266,9 +272,16 @@ def run_review_panel(
 
         # Permanent errors (auth, config) should propagate — not silently approve
         permanent_markers = [
-            "api key", "authentication", "unauthorized", "403",
-            "invalid model", "model not found", "permission denied",
-            "import", "module", "yaml",
+            "api key",
+            "authentication",
+            "unauthorized",
+            "403",
+            "invalid model",
+            "model not found",
+            "permission denied",
+            "import",
+            "module",
+            "yaml",
         ]
         is_permanent = any(marker in error_msg for marker in permanent_markers)
 
@@ -330,13 +343,20 @@ def run_review_panel(
         logger.warning("Could not parse JSON verdict, using text fallback")
         verdict = _parse_verdict_from_text(moderator_text)
 
-    verdict_emoji = {"approved": "✅", "revised": "🔄", "rejected": "❌"}.get(verdict.decision, "❓")
-    print(log_box(f"{verdict_emoji} Review Panel Verdict", [
-        f"Decision: {verdict.decision.upper()}",
-        f"Confidence: {verdict.confidence:.2f}",
-        f"Feedback: {verdict.feedback[:200]}",
-        f"Concerns: {', '.join(verdict.concerns) if verdict.concerns else 'None'}",
-    ]))
+    verdict_emoji = {"approved": "✅", "revised": "🔄", "rejected": "❌"}.get(
+        verdict.decision, "❓"
+    )
+    print(
+        log_box(
+            f"{verdict_emoji} Review Panel Verdict",
+            [
+                f"Decision: {verdict.decision.upper()}",
+                f"Confidence: {verdict.confidence:.2f}",
+                f"Feedback: {verdict.feedback[:200]}",
+                f"Concerns: {', '.join(verdict.concerns) if verdict.concerns else 'None'}",
+            ],
+        )
+    )
     logger.info(
         f"Review panel verdict: {verdict.decision} "
         f"(confidence: {verdict.confidence:.2f})"

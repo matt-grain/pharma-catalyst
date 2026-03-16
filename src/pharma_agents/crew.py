@@ -110,7 +110,9 @@ class LoggingLLM(LLM):
                 LoggingLLM._last_call_time = time.perf_counter()
 
         # All retries exhausted
-        logger.error(f"LLM CALL #{call_id} FAIL after {self._RATE_LIMIT_MAX_RETRIES} retries | {last_error}")
+        logger.error(
+            f"LLM CALL #{call_id} FAIL after {self._RATE_LIMIT_MAX_RETRIES} retries | {last_error}"
+        )
         raise last_error  # type: ignore[misc]
 
 
@@ -160,8 +162,7 @@ def get_api_key(model: str) -> str:
         if key:
             return key
     raise EnvironmentError(
-        f"No API key found for provider '{provider}'. "
-        f"Set one of: {', '.join(env_vars)}"
+        f"No API key found for provider '{provider}'. Set one of: {', '.join(env_vars)}"
     )
 
 
