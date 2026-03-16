@@ -75,7 +75,8 @@ print("=" * 70)
 print()
 
 print("Loading ToolUniverse...")
-from tooluniverse import ToolUniverse
+# noqa: E402
+from tooluniverse import ToolUniverse  # noqa: E402
 
 tu = ToolUniverse()
 tu.load_tools()

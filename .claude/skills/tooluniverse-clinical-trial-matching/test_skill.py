@@ -409,7 +409,7 @@ def test_23_get_trial_locations():
     assert len(locations) > 0, "No locations found"
     loc = locations[0]
     assert "country" in loc, "Missing 'country' in location"
-    countries = set(l.get("country", "") for l in locations)
+    countries = set(loc.get("country", "") for loc in locations)
     print(
         f"       {len(locations)} sites across {len(countries)} countries: {list(countries)[:5]}"
     )
@@ -728,9 +728,9 @@ def test_41_location_analysis():
     locations = item.get("locations", [])
     assert len(locations) > 0, "No locations"
 
-    countries = set(l.get("country", "") for l in locations)
-    us_sites = [l for l in locations if l.get("country") == "United States"]
-    us_states = set(l.get("state", "") for l in us_sites)
+    countries = set(loc.get("country", "") for loc in locations)
+    us_sites = [loc for loc in locations if loc.get("country") == "United States"]
+    us_states = set(loc.get("state", "") for loc in us_sites)
 
     assert len(countries) > 0, "No countries found"
     print(

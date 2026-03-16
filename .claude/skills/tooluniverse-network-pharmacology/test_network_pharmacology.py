@@ -98,7 +98,7 @@ print()
 print("Loading ToolUniverse...")
 t0 = time.time()
 
-from tooluniverse import ToolUniverse
+from tooluniverse import ToolUniverse  # noqa: E402
 
 tu = ToolUniverse()
 tu.load_tools()
