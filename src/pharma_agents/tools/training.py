@@ -1,10 +1,27 @@
 """Training script manipulation tools."""
 
-from typing import ClassVar
+import re
+import subprocess
+import sys
+from typing import Callable, ClassVar, Final
 
 from crewai.tools import BaseTool
 
 from pharma_agents.memory import get_experiments_dir, get_metric_name
+
+# Dangerous patterns blocked in train.py writes/edits
+_DANGEROUS_PATTERNS: Final[tuple[str, ...]] = (
+    "os.system(",
+    "subprocess.run(",
+    "subprocess.call(",
+    "subprocess.Popen(",
+    "shutil.rmtree(",
+    "__import__(",
+    "eval(",
+    "exec(",
+    "os.remove(",
+    "os.rmdir(",
+)
 
 # Allowed packages for InstallPackageTool (ML/data science packages only)
 ALLOWED_PACKAGES = {
@@ -61,7 +78,6 @@ class ReadTrainPyTool(BaseTool):
             return self._outline(lines)
 
         # Line range mode: "lines 20-50" or "20-50"
-        import re
         range_match = re.match(r"(?:lines?\s*)?(\d+)\s*[-–]\s*(\d+)", arg)
         if range_match:
             start = max(1, int(range_match.group(1)))
@@ -80,7 +96,6 @@ class ReadTrainPyTool(BaseTool):
     @staticmethod
     def _outline(lines: list[str]) -> str:
         """Extract function/class signatures and key structure."""
-        import re
         outline_lines: list[str] = []
         total = len(lines)
 
@@ -161,19 +176,7 @@ class WriteTrainPyTool(BaseTool):
             return "Error: train.py must have import statements."
 
         # Block dangerous patterns
-        dangerous = [
-            "os.system(",
-            "subprocess.run(",
-            "subprocess.call(",
-            "subprocess.Popen(",
-            "shutil.rmtree(",
-            "__import__(",
-            "eval(",
-            "exec(",
-            "os.remove(",
-            "os.rmdir(",
-        ]
-        for pattern in dangerous:
+        for pattern in _DANGEROUS_PATTERNS:
             if pattern in content:
                 return f"Error: Dangerous pattern '{pattern}' not allowed in train.py."
 
@@ -249,12 +252,7 @@ class EditTrainPyTool(BaseTool):
         new_content = content.replace(old_text, new_text, 1)
 
         # Block dangerous patterns in new_text
-        dangerous = [
-            "os.system(", "subprocess.run(", "subprocess.call(",
-            "subprocess.Popen(", "shutil.rmtree(", "__import__(",
-            "eval(", "exec(", "os.remove(", "os.rmdir(",
-        ]
-        for pattern in dangerous:
+        for pattern in _DANGEROUS_PATTERNS:
             if pattern in new_text:
                 return f"Error: Dangerous pattern '{pattern}' not allowed."
 
@@ -322,12 +320,10 @@ class CodeCheckTool(BaseTool):
         "Pass any string (e.g. 'check'). "
         "ALWAYS run this AFTER writing code to ensure it will run correctly."
     )
-    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
+    cache_function: Callable = lambda _args, _result: False  # type: ignore[assignment]
 
     def _run(self, argument: str = "check") -> str:
         """Run ruff on train.py."""
-        import subprocess
-
         train_path = get_experiments_dir() / "train.py"
 
         # Run ruff through uv (ruff is a dev dependency, not on system PATH)
@@ -360,13 +356,10 @@ class RunTrainPyTool(BaseTool):
         "Runs train.py and returns the validation score. "
         "Pass any string (e.g. 'run'). Returns score value or error message."
     )
-    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
+    cache_function: Callable = lambda _args, _result: False  # type: ignore[assignment]
 
     def _run(self, argument: str = "run") -> str:
         """Run train.py and return score."""
-        import subprocess
-        import sys
-
         metric = get_metric_name()
         experiments_dir = get_experiments_dir()
 
@@ -402,7 +395,7 @@ class InstallPackageTool(BaseTool):
         "Only ML/data science packages are allowed. "
         "Use this when you need a package that's not installed."
     )
-    cache_function: object = lambda _args, _result: False  # type: ignore[assignment]
+    cache_function: Callable = lambda _args, _result: False  # type: ignore[assignment]
 
     _packages_installed: ClassVar[list[str]] = []
     max_installs_per_run: int = 3
@@ -413,8 +406,6 @@ class InstallPackageTool(BaseTool):
 
     def _run(self, package: str) -> str:
         """Install a package via uv add."""
-        import subprocess
-
         package = package.strip().lower()
 
         # Safety check - only allow whitelisted packages

@@ -18,7 +18,7 @@ from loguru import logger
 
 from .crew import PharmaAgentsCrew, HypothesisOutput
 from .tools.evaluate import run_training, log_experiment
-from .memory import AgentMemory, get_metric_name, is_better, compute_improvement_pct
+from .memory import AgentMemory, get_metric_name, get_metric_direction, is_better, compute_improvement_pct
 from .review_panel import run_review_panel, format_approved_hypothesis
 
 # Content truncation limits
@@ -27,14 +27,18 @@ MAX_REASONING_LENGTH = 300
 
 
 class TeeStream:
-    """Stream that writes to both stdout and a log file."""
+    """Stream that writes to both stdout and a log file.
+
+    Accepts an already-opened file handle (not a path) so the caller
+    controls the file lifecycle via a context manager.
+    """
 
     # Regex to strip ANSI escape codes
     ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
-    def __init__(self, original_stream, log_file: Path):
+    def __init__(self, original_stream, log_fh):
         self.original = original_stream
-        self.log_file = open(log_file, "a", encoding="utf-8")
+        self.log_fh = log_fh
         self._closed = False
 
     def write(self, data):
@@ -43,8 +47,8 @@ class TeeStream:
         if not self._closed:
             try:
                 clean_data = self.ANSI_ESCAPE.sub("", data)
-                self.log_file.write(clean_data)
-                self.log_file.flush()
+                self.log_fh.write(clean_data)
+                self.log_fh.flush()
             except (ValueError, OSError):
                 pass  # File closed or invalid, ignore late writes
 
@@ -52,31 +56,30 @@ class TeeStream:
         self.original.flush()
         if not self._closed:
             try:
-                self.log_file.flush()
+                self.log_fh.flush()
             except (ValueError, OSError):
                 pass
 
-    def close(self):
+    def detach(self):
+        """Mark as detached — stop writing to log but don't close the file handle."""
         self._closed = True
-        self.log_file.close()
-
-    def __del__(self):
-        """Cleanup file handle on garbage collection."""
-        if not self._closed:
-            self.close()
 
 
 @contextmanager
 def capture_stdout_to_log(log_file: Path):
-    """Context manager to tee stdout to log file."""
-    tee = TeeStream(sys.stdout, log_file)
-    old_stdout = sys.stdout
-    sys.stdout = tee
-    try:
-        yield
-    finally:
-        sys.stdout = old_stdout
-        tee.close()
+    """Context manager to tee stdout to log file.
+
+    Opens the file handle here so it's guaranteed to close on exit.
+    """
+    with open(log_file, "a", encoding="utf-8") as fh:
+        tee = TeeStream(sys.stdout, fh)
+        old_stdout = sys.stdout
+        sys.stdout = tee
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            tee.detach()
 
 
 # Configure loguru
@@ -462,8 +465,10 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
         logger.error(f"Baseline training failed: {baseline_result.error}")
         return
 
-    # After success check, rmse is guaranteed to be set
-    assert baseline_result.rmse is not None
+    # After success check, score is guaranteed to be set
+    if baseline_result.rmse is None:
+        logger.error("Baseline training returned no score despite success=True")
+        return
     baseline_score: float = baseline_result.rmse
     best_score: float = baseline_score
     logger.info(f"Baseline {metric}: {baseline_score:.4f}")
@@ -534,7 +539,7 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
         logger.info(f"Current best {metric}: {best_score:.4f}")
 
         # Prepare inputs for the crew
-        from .memory import get_metric_direction, get_baseline_config
+        from .memory import get_baseline_config
 
         config = get_baseline_config()
 
@@ -559,6 +564,7 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
             else "No previous experiments in this run",
             "agent_memory": memory.format_for_prompt(run_number),
             "existing_papers": existing_papers_str,
+            "approved_hypothesis": "",  # Set by review panel flow; empty in legacy flow
         }
 
         # Run the crew (capture stdout to log file)
@@ -604,8 +610,6 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
                     if pydantic_obj and hasattr(pydantic_obj, "proposal"):
                         hypothesis_obj = pydantic_obj
                         break
-
-                from .memory import get_metric_direction
 
                 verdict = run_review_panel(
                     hypothesis=hypothesis_obj,
@@ -785,7 +789,6 @@ def run(iterations: int = 10, use_review_panel: bool = True) -> None:
 
     # Generate HTML report with charts
     from .report import generate_run_report
-    from .memory import get_metric_direction
 
     report_path = generate_run_report(
         run_id=run_number,
@@ -880,6 +883,9 @@ def promote(run_number: int, experiment: str | None = None) -> None:
     eval_result = run_training()
 
     # Update baseline.json - preserve metric config, update score
+    if not baseline_json.exists():
+        logger.error(f"baseline.json not found at {baseline_json}")
+        return
     existing_config = json.loads(baseline_json.read_text())
 
     baseline_data = {
@@ -892,16 +898,24 @@ def promote(run_number: int, experiment: str | None = None) -> None:
     baseline_json.write_text(json.dumps(baseline_data, indent=2))
 
     # Commit the new baseline
-    subprocess.run(
+    add_result = subprocess.run(
         ["git", "add", str(baseline), str(baseline_json)],
         cwd=project_root,
         capture_output=True,
+        text=True,
     )
-    subprocess.run(
+    if add_result.returncode != 0:
+        logger.error(f"git add failed: {add_result.stderr}")
+        return
+    commit_result = subprocess.run(
         ["git", "commit", "-m", f"Update baseline from {branch_name}"],
         cwd=project_root,
         capture_output=True,
+        text=True,
     )
+    if commit_result.returncode != 0:
+        logger.error(f"git commit failed: {commit_result.stderr}")
+        return
 
     logger.success(f"Promoted {branch_name} to main!")
     logger.info(f"New baseline {eval_result.metric}: {eval_result.rmse:.4f}")

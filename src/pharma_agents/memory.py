@@ -31,7 +31,13 @@ def get_experiments_dir() -> Path:
     """
     override = os.environ.get("PHARMA_EXPERIMENTS_DIR")
     if override:
-        return Path(override)
+        resolved = Path(override).resolve()
+        # Guard against path traversal via relative components
+        if ".." in Path(override).parts:
+            raise ValueError(
+                f"PHARMA_EXPERIMENTS_DIR contains path traversal: {override}"
+            )
+        return resolved
     return get_experiments_root() / get_experiment_name()
 
 
@@ -237,7 +243,7 @@ class AgentMemory:
 
         # Calculate improvement (direction-aware)
         improvement = None
-        if score_after and score_before:
+        if score_after is not None and score_before is not None:
             improvement = compute_improvement_pct(score_before, score_after)
 
         exp = Experiment(
@@ -258,9 +264,9 @@ class AgentMemory:
         # Track consecutive failures
         if result == "success":
             run_memory.consecutive_failures = 0
-            if score_after and is_better(score_after, run_memory.best_score):
+            if score_after is not None and is_better(score_after, run_memory.best_score):
                 run_memory.best_score = score_after
-            if score_after and is_better(score_after, self.global_best_score):
+            if score_after is not None and is_better(score_after, self.global_best_score):
                 self.global_best_score = score_after
         else:
             run_memory.consecutive_failures += 1
@@ -323,9 +329,14 @@ class AgentMemory:
                 "Incremental changes exhausted. Try different model families or features."
             )
         elif len(successes) > 0:
-            avg_improvement = sum(
-                e.improvement_pct for e in successes if e.improvement_pct
-            ) / len(successes)
+            valid_improvements = [
+                e.improvement_pct for e in successes if e.improvement_pct is not None
+            ]
+            avg_improvement = (
+                sum(valid_improvements) / len(valid_improvements)
+                if valid_improvements
+                else 0.0
+            )
             run.conclusion = "PROGRESS_CONTINUING"
             run.conclusion_detail = (
                 f"Still making progress (avg {avg_improvement:.1f}% per success). "

@@ -7,6 +7,7 @@ matching the CrewAI pattern of agents.yaml / tasks.yaml.
 
 from __future__ import annotations
 
+import functools
 from pathlib import Path
 from typing import Any, Final
 
@@ -18,8 +19,9 @@ _CONFIG_DIR: Final[Path] = Path(__file__).parent
 _AGENTS_YAML: Final[Path] = _CONFIG_DIR / "review_agents.yaml"
 
 
+@functools.lru_cache(maxsize=1)
 def _load_agents_config() -> dict[str, Any]:
-    """Load review agent definitions from YAML."""
+    """Load review agent definitions from YAML (cached after first read)."""
     return yaml.safe_load(_AGENTS_YAML.read_text(encoding="utf-8"))
 
 

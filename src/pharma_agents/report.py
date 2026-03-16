@@ -4,6 +4,7 @@ HTML report generator with Plotly charts.
 Generates visual reports showing experiment progress and metrics.
 """
 
+import html
 from datetime import datetime
 from pathlib import Path
 
@@ -246,12 +247,16 @@ def generate_run_report(
         review_conf = exp.get("review_confidence")
         conf_str = f"{review_conf:.0%}" if review_conf is not None else ""
 
-        # Review feedback tooltip
-        review_fb = exp.get("review_feedback", "")
+        # Review feedback tooltip (escape LLM-generated text for HTML safety)
+        review_fb = html.escape(exp.get("review_feedback", ""))
         concerns = exp.get("review_concerns", [])
         tooltip = review_fb
         if concerns:
-            tooltip += " | Concerns: " + "; ".join(concerns)
+            tooltip += " | Concerns: " + "; ".join(html.escape(c) for c in concerns)
+
+        hypothesis_escaped = html.escape(hypothesis)
+        full_hypothesis_escaped = html.escape(exp.get("hypothesis", ""))
+        insight_escaped = html.escape(exp.get("insight", "N/A"))
 
         table_rows += f"""
         <tr>
@@ -260,8 +265,8 @@ def generate_run_report(
             <td>{score_str}</td>
             <td>{imp_str}</td>
             <td title="{tooltip}">{review_badge} {conf_str}</td>
-            <td title="{exp.get("hypothesis", "")}">{hypothesis}</td>
-            <td>{exp.get("insight", "N/A")}</td>
+            <td title="{full_hypothesis_escaped}">{hypothesis_escaped}</td>
+            <td>{insight_escaped}</td>
         </tr>
         """
 

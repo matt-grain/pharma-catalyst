@@ -264,13 +264,25 @@ def run_review_panel(
         rate_limit_markers = ["429", "rate limit", "quota", "resource_exhausted"]
         is_rate_limit = any(marker in error_msg for marker in rate_limit_markers)
 
+        # Permanent errors (auth, config) should propagate — not silently approve
+        permanent_markers = [
+            "api key", "authentication", "unauthorized", "403",
+            "invalid model", "model not found", "permission denied",
+            "import", "module", "yaml",
+        ]
+        is_permanent = any(marker in error_msg for marker in permanent_markers)
+
+        if is_permanent:
+            logger.error(f"Review panel PERMANENT error — re-raising: {e}")
+            raise
+
         if not is_rate_limit:
-            logger.error(f"Review panel error: {e}")
+            logger.error(f"Review panel transient error, defaulting to approved: {e}")
             return ReviewVerdict(
                 decision="approved",
                 feedback=f"Review panel failed ({e}), defaulting to approved",
                 confidence=0.2,
-                concerns=["Review panel encountered an error"],
+                concerns=["Review panel encountered a transient error"],
             )
 
         # Rate limit hit — but Moderator may have already spoken in an earlier round.
@@ -286,10 +298,11 @@ def run_review_panel(
         content = msg.get("content", "")
         logger.info(f"[REVIEW] [{speaker}] {content}")
 
-    # Extract Moderator's verdict from messages
+    # Extract Moderator's verdict from messages (match by name only —
+    # all AG2 agents have role="assistant", so matching role is too broad)
     moderator_text = ""
     for msg in reversed(chat_messages):
-        if msg.get("name") == "Moderator" or msg.get("role") == "assistant":
+        if msg.get("name") == "Moderator":
             moderator_text = msg.get("content", "")
             if "decision" in moderator_text.lower():
                 break
