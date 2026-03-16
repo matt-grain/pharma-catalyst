@@ -10,12 +10,56 @@ All custom tools available to pharma-agents agents.
 **Used by:** Hypothesis Agent, Model Agent, Evaluator Agent
 **Source:** `src/pharma_agents/tools/training.py`
 
-Reads the current content of `train.py`.
+Reads `train.py` content in three modes:
+
+| Mode | Input | Output |
+|------|-------|--------|
+| **Full** (default) | `"read"` or `"full"` | Full file with line numbers (`   1 | code...`) |
+| **Outline** | `"outline"` | Function/class signatures with line numbers — use first on large files |
+| **Line range** | `"lines 20-50"` | Only the specified lines with line numbers |
+
+**Workflow tip:** Use `outline` first to find where to edit, then `lines N-M` to read just that section. This minimizes context pollution in agent conversation history.
 
 ```
-Input: (none)
-Output: Full Python code of train.py
+Input: "read" | "outline" | "lines N-M"
+Output: File content with line numbers, or structural outline
 ```
+
+---
+
+### `edit_train_py`
+**Used by:** Model Agent
+**Source:** `src/pharma_agents/tools/training.py`
+
+Makes targeted edits to `train.py` by replacing a specific text snippet. Preferred over `write_train_py` for small changes — avoids f-string double-encoding issues and reduces context pollution.
+
+```
+Input: old_text (exact text to find), new_text (replacement)
+Output: "Successfully edited train.py: replaced N lines with M lines" or error
+```
+
+**Safety features:**
+- Rejects if `old_text` not found — shows similar lines as hints (extracts key identifier for fuzzy matching)
+- Rejects ambiguous matches (>1 occurrence) — asks for more context
+- Blocks dangerous patterns in `new_text`: `os.system()`, `subprocess.run()`, `eval()`, `exec()`, etc.
+
+---
+
+### `search_train_py`
+**Used by:** Model Agent
+**Source:** `src/pharma_agents/tools/training.py`
+
+Searches `train.py` for a text pattern (supports regex). Returns matching lines with line numbers. Use before `edit_train_py` to find exact text to replace.
+
+```
+Input: Pattern string (regex or literal)
+Output: Matching lines with line numbers, e.g. "  L  26: score = 0.85"
+```
+
+**Features:**
+- Case-insensitive by default
+- Falls back to literal search if regex is invalid
+- Shows match count
 
 ---
 
@@ -23,14 +67,16 @@ Output: Full Python code of train.py
 **Used by:** Model Agent
 **Source:** `src/pharma_agents/tools/training.py`
 
-Writes complete content to `train.py`, overwriting existing code.
+Writes complete content to `train.py`, overwriting existing code. Use `edit_train_py` for small changes instead.
 
 **Validation (applied before writing):**
 - Strips markdown code fences (```` ```python ... ``` ````) — common LLM output artifact
+- Fixes double-encoded escape sequences (`\\n` → `\n`, `\\t` → `\t`) — common when code passes through JSON serialization twice
 - Rejects content shorter than 50 characters
 - Requires a `def train` function
 - Requires at least one `import` statement
 - Blocks dangerous patterns: `os.system()`, `subprocess.run()`, `eval()`, `exec()`, `shutil.rmtree()`, etc.
+- Warns if feature computation detected without inf/NaN handling
 
 ```
 Input: Full Python code (string)
@@ -66,7 +112,7 @@ Output: "RMSE: 0.6532" or "ROC_AUC: 0.9286" (depending on experiment)
 Timeout: 180 seconds
 ```
 
-**Caching:** Disabled — always runs fresh training.
+**Caching:** Disabled via `cache_function = lambda: False` — prevents CrewAI's anti-loop protection from blocking retries when the agent calls `run_train_py("run")` multiple times with the same input.
 
 ---
 
@@ -252,6 +298,8 @@ Tools with `reset_counters()` classmethod:
 | Tool | Rate Limit | Max Per Iteration | Caching |
 |------|------------|-------------------|---------|
 | `read_train_py` | — | — | default (cached) |
+| `edit_train_py` | — | — | default (cached) |
+| `search_train_py` | — | — | default (cached) |
 | `write_train_py` | — | — | default (cached) |
 | `code_check` | — | — | **disabled** |
 | `run_train_py` | — | — | **disabled** |

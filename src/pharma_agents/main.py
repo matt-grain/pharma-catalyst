@@ -16,9 +16,10 @@ from datetime import datetime
 
 from loguru import logger
 
-from .crew import PharmaAgentsCrew
+from .crew import PharmaAgentsCrew, HypothesisOutput
 from .tools.evaluate import run_training, log_experiment
 from .memory import AgentMemory, get_metric_name, is_better, compute_improvement_pct
+from .review_panel import run_review_panel, format_approved_hypothesis
 
 # Content truncation limits
 MAX_HYPOTHESIS_LENGTH = 200
@@ -386,7 +387,7 @@ def parse_hypothesis_from_log(log_file: Path) -> tuple[str, str]:
     return hypothesis, reasoning
 
 
-def run(iterations: int = 10) -> None:
+def run(iterations: int = 10, use_review_panel: bool = True) -> None:
     """
     Run the pharma-agents crew for multiple iterations.
 
@@ -561,17 +562,86 @@ def run(iterations: int = 10) -> None:
         }
 
         # Run the crew (capture stdout to log file)
-        # First iteration: use crew_with_archivist if needed (archivist runs async)
-        # Subsequent iterations: use regular crew
+        # Two flows: review panel (hypothesis → review → implement) or legacy single crew
+        verdict = None  # Set by review panel flow, None in legacy flow
         try:
-            if i == 0 and use_archivist_first_iter:
-                logger.info("Running crew with async archivist...")
-                with capture_stdout_to_log(log_file):
-                    result = crew.crew_with_archivist().kickoff(inputs=inputs)
+            if not use_review_panel:
+                # Legacy flow: single crew, no review
+                if i == 0 and use_archivist_first_iter:
+                    logger.info("Running crew with async archivist...")
+                    with capture_stdout_to_log(log_file):
+                        result = crew.crew_with_archivist().kickoff(inputs=inputs)
+                else:
+                    logger.info("Running agent crew...")
+                    with capture_stdout_to_log(log_file):
+                        result = crew.crew().kickoff(inputs=inputs)
             else:
-                logger.info("Running agent crew...")
+                # Review panel flow: hypothesis → review → implement
+                # Step 1: Run archivist if needed (first iteration only)
+                if i == 0 and use_archivist_first_iter:
+                    logger.info("Running archivist crew...")
+                    with capture_stdout_to_log(log_file):
+                        crew.archivist_crew().kickoff(inputs=inputs)
+
+                # Step 2: Generate hypothesis
+                logger.info("Running hypothesis crew...")
                 with capture_stdout_to_log(log_file):
-                    result = crew.crew().kickoff(inputs=inputs)
+                    hypothesis_result = crew.hypothesis_crew().kickoff(inputs=inputs)
+                hypothesis_text, reasoning_text = extract_hypothesis_from_result(
+                    hypothesis_result
+                )
+
+                # Step 3: Review panel gate
+                hypothesis_obj = HypothesisOutput(
+                    proposal=hypothesis_text,
+                    reasoning=reasoning_text,
+                    change_description="",
+                    literature_insight=None,
+                )
+                # Try to get richer structured output if available
+                for task_output in getattr(hypothesis_result, "tasks_output", []):
+                    pydantic_obj = getattr(task_output, "pydantic", None)
+                    if pydantic_obj and hasattr(pydantic_obj, "proposal"):
+                        hypothesis_obj = pydantic_obj
+                        break
+
+                from .memory import get_metric_direction
+
+                verdict = run_review_panel(
+                    hypothesis=hypothesis_obj,
+                    experiment_context=memory.format_for_prompt(run_number),
+                    baseline_score=best_score,
+                    metric=metric,
+                    direction=get_metric_direction(),
+                )
+                logger.info(
+                    f"Review verdict: {verdict.decision} "
+                    f"(confidence: {verdict.confidence:.2f})"
+                )
+
+                if verdict.decision == "rejected":
+                    logger.warning(f"REVIEW PANEL REJECTED: {verdict.feedback}")
+                    memory.add_experiment(
+                        run=run_number,
+                        iteration=i + 1,
+                        hypothesis=hypothesis_text,
+                        reasoning=reasoning_text,
+                        result="rejected_by_review",
+                        score_before=best_score,
+                        score_after=None,
+                        insight=f"Review panel rejected: {verdict.feedback}",
+                        review_verdict=verdict.decision,
+                        review_feedback=verdict.feedback,
+                    )
+                    continue
+
+                # Step 4: Run implementation with approved/revised hypothesis
+                approved = format_approved_hypothesis(verdict, hypothesis_obj)
+                impl_inputs = {**inputs, "approved_hypothesis": approved}
+                logger.info("Running implementation crew with approved hypothesis...")
+                with capture_stdout_to_log(log_file):
+                    result = crew.implementation_crew().kickoff(inputs=impl_inputs)
+
             logger.info("Crew completed")
             logger.debug(f"Crew output: {result}")
         except Exception as e:
@@ -593,11 +663,14 @@ def run(iterations: int = 10) -> None:
                 logger.error("PERMANENT ERROR detected — aborting run")
                 break
 
-            # Rate limit — wait and retry
+            # Rate limit — use API's retryDelay if available, else default 60s
             rate_limit_markers = ["rate limit", "429", "quota", "resource exhausted"]
             if any(marker in error_msg for marker in rate_limit_markers):
-                logger.warning("Rate limit hit — waiting 60s before next iteration")
-                time.sleep(60)
+                # Parse retryDelay from API error (e.g. "'retryDelay': '31s'")
+                delay_match = re.search(r"retryDelay['\"]:\s*['\"](\d+)", error_msg)
+                wait_seconds = int(delay_match.group(1)) + 5 if delay_match else 60
+                logger.warning(f"Rate limit hit — waiting {wait_seconds}s before next iteration")
+                time.sleep(wait_seconds)
 
             continue
 
@@ -613,6 +686,10 @@ def run(iterations: int = 10) -> None:
             "rmse": eval_result.rmse,
             "success": eval_result.success,
             "recommendation": eval_result.recommendation,
+            "review_verdict": verdict.decision if verdict else None,
+            "review_confidence": verdict.confidence if verdict else None,
+            "review_feedback": verdict.feedback if verdict else None,
+            "review_concerns": verdict.concerns if verdict else [],
         }
         experiment_history.append(experiment_entry)
 
@@ -641,6 +718,8 @@ def run(iterations: int = 10) -> None:
                     score_before=best_score,
                     score_after=eval_result.rmse,
                     insight=f"Achieved {improvement:.1f}% improvement",
+                    review_verdict=verdict.decision if verdict else None,
+                    review_feedback=verdict.feedback if verdict else None,
                 )
 
                 best_score = eval_result.rmse
@@ -663,6 +742,8 @@ def run(iterations: int = 10) -> None:
                     score_before=best_score,
                     score_after=eval_result.rmse,
                     insight=f"No improvement ({metric} {eval_result.rmse:.4f} vs baseline {best_score:.4f})",
+                    review_verdict=verdict.decision if verdict else None,
+                    review_feedback=verdict.feedback if verdict else None,
                 )
 
                 git_revert_changes(worktree_path)
@@ -680,6 +761,8 @@ def run(iterations: int = 10) -> None:
                 score_before=best_score,
                 score_after=None,
                 insight=f"Training failed: {eval_result.error}",
+                review_verdict=verdict.decision if verdict else None,
+                review_feedback=verdict.feedback if verdict else None,
             )
 
             git_revert_changes(worktree_path)
@@ -712,6 +795,9 @@ def run(iterations: int = 10) -> None:
         baseline_score=baseline_score,
         experiments=experiment_history,
         output_dir=run_log_dir,
+        model_name=os.getenv("LLM_MODEL", "unknown"),
+        gemini_tier=os.getenv("GEMINI_TIER", "paid"),
+        review_panel_enabled=use_review_panel,
     )
     logger.info(f"Report:        {report_path}")
 
@@ -841,10 +927,16 @@ if __name__ == "__main__":
         default=int(os.environ.get("MAX_ITERATIONS", "5")),
         help="Number of iterations (default: 5 or MAX_ITERATIONS env var)",
     )
+    parser.add_argument(
+        "--no-review",
+        action="store_true",
+        default=os.environ.get("ENABLE_REVIEW_PANEL", "true").lower() == "false",
+        help="Skip AutoGen review panel (faster, less validation)",
+    )
     args = parser.parse_args()
 
     # Set experiment before importing anything that uses it
     os.environ["PHARMA_EXPERIMENT"] = args.experiment
     print(f"Running experiment: {args.experiment}")
 
-    run(iterations=args.iterations)
+    run(iterations=args.iterations, use_review_panel=not args.no_review)

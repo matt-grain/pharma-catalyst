@@ -8,7 +8,8 @@ Pharma-agents is an autonomous multi-agent system that iteratively improves mole
 
 | Component | Technology |
 |-----------|------------|
-| Agent Framework | CrewAI 0.100+ |
+| Sequential Pipeline | CrewAI 0.100+ |
+| Adversarial Review | AG2 (AutoGen) 0.9+ |
 | LLM | Gemini Flash (configurable) |
 | Embeddings | fastembed (BGE-small-en-v1.5, 384 dims) |
 | ML Framework | scikit-learn, RDKit, XGBoost, LightGBM, TF/Keras... |
@@ -23,6 +24,9 @@ pharma-agents/
 ├── src/pharma_agents/
 │   ├── main.py              # Entry point, run loop, worktree management
 │   ├── crew.py              # CrewAI crew & agent definitions
+│   ├── review_panel.py      # AutoGen expert review panel (GroupChat)
+│   ├── review_config.py     # Review panel config loader & constants
+│   ├── review_agents.yaml   # Review panel agent definitions (names + prompts)
 │   ├── memory.py            # AgentMemory persistence (what worked/failed)
 │   ├── report.py            # HTML report generation
 │   ├── agents.yaml          # Agent configurations
@@ -45,6 +49,30 @@ pharma-agents/
     ├── ARCHITECTURE.md      # This file
     └── agents.md            # Agent profiles & workflows
 ```
+
+## Dual-Framework Architecture: CrewAI + AutoGen
+
+The system deliberately uses two agent frameworks, each for what it does best:
+
+- **CrewAI** handles the sequential ML research pipeline (archivist → hypothesis → implement → evaluate). CrewAI excels at task-based workflows with clear hand-offs.
+- **AutoGen (AG2)** handles the adversarial expert review panel. AutoGen's `GroupChat` enables multi-perspective debate where agents build on each other's arguments — a fundamentally different interaction pattern from sequential tasks.
+
+### Review Panel Flow (default)
+
+```
+[CrewAI Hypothesis Crew]
+     │
+     ▼  HypothesisOutput (Pydantic)
+[AutoGen Review Panel: Statistician + Medicinal Chemist + Devil's Advocate → Moderator]
+     │
+     ▼  ReviewVerdict (approved / revised / rejected)
+[CrewAI Implementation Crew: implement_task → evaluate_task]
+     or
+[Skip iteration if rejected — feedback stored in memory]
+```
+
+The review panel catches bad hypotheses before committing to 3-5 minutes of model training.
+Use `--no-review` to bypass the panel and use the legacy single-crew flow.
 
 ## CrewAI Integration
 
@@ -263,6 +291,7 @@ Each run operates in an isolated git worktree:
 
 | Decision | Rationale |
 |----------|-----------|
+| CrewAI for pipeline, AutoGen for review | Each framework used for its strength (see ADR in decisions.md) |
 | Sequential process (not parallel) | Each agent depends on previous output |
 | fastembed over OpenAI embeddings | No API key required, faster, local |
 | Worktrees over branches | Full file isolation, easy cleanup |

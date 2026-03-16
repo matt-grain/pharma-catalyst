@@ -115,13 +115,17 @@ class Experiment:
     reasoning: str  # WHY this direction was taken
 
     # The result
-    result: str  # "success" or "failure"
+    result: str  # "success", "failure", or "rejected_by_review"
     score_before: float
     score_after: Optional[float]
     improvement_pct: Optional[float]
 
     # The learning
     insight: str  # What we learned (especially WHY it failed/succeeded)
+
+    # Review panel feedback (when review panel is enabled)
+    review_verdict: Optional[str] = None
+    review_feedback: Optional[str] = None
 
 
 @dataclass
@@ -221,6 +225,8 @@ class AgentMemory:
         score_before: float,
         score_after: Optional[float],
         insight: str,
+        review_verdict: Optional[str] = None,
+        review_feedback: Optional[str] = None,
     ) -> None:
         """Record an experiment."""
         # Ensure run exists
@@ -244,6 +250,8 @@ class AgentMemory:
             score_after=score_after,
             improvement_pct=improvement,
             insight=insight,
+            review_verdict=review_verdict,
+            review_feedback=review_feedback,
         )
         run_memory.experiments.append(exp)
 
@@ -467,6 +475,21 @@ class AgentMemory:
                 if exp.reasoning and exp.reasoning != "See crew output for details":
                     lines.append(f"  Reasoning: {exp.reasoning}")
                 lines.append(f"  Why it failed: {exp.insight}")
+            lines.append("")
+
+        # Proposals rejected by review panel
+        rejected = [
+            e for e in self.get_all_experiments() if e.result == "rejected_by_review"
+        ]
+        seen_hypotheses = set()
+        if rejected:
+            lines.append("### Proposals Rejected by Review Panel")
+            for exp in rejected[-5:]:
+                if exp.hypothesis in seen_hypotheses:
+                    continue
+                seen_hypotheses.add(exp.hypothesis)
+                lines.append(f"- **{exp.hypothesis}**")
+                lines.append(f"  Panel feedback: {exp.insight}")
             lines.append("")
 
         return "\n".join(lines)

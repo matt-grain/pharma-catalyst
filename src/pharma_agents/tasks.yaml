@@ -82,15 +82,18 @@ hypothesis_task:
 
 implement_task:
   description: >
-    Implement the proposal from the Research Scientist in train.py.
+    Implement the following APPROVED proposal in train.py:
+
+    {approved_hypothesis}
 
     Steps:
-    1. Read current train.py
-    2. If you need a package that's not installed, use install_package tool first
-    3. Modify code to implement the proposal
-    4. Use write_train_py tool with the COMPLETE file content
+    1. Read the file structure: read_train_py("outline") to see functions and line numbers
+    2. Read the section you need to change: read_train_py("lines 30-60")
+    3. If you need a package that's not installed, use install_package tool first
+    4. Make changes: use edit_train_py(old_text, new_text) for targeted edits — preferred
+       OR write_train_py for complete rewrites (must include FULL file content)
     5. Run code_check tool to verify no linting/type errors
-    6. If errors found, fix them and repeat steps 4-5
+    6. If errors found, use edit_train_py to fix them and re-check
 
     Rules:
     - Modify ONLY train.py
