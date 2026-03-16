@@ -412,5 +412,75 @@ class TestEndToEndWorkflow:
         assert "[0." in query_result  # Similarity score
 
 
+class TestToolUniverseTools:
+    """Test PubMed, PubChem, and validation tools against real APIs."""
+
+    @pytest.mark.integration
+    @pytest.mark.timeout(30)
+    def test_pubmed_search_returns_results(self):
+        """Search PubMed for a common pharma topic."""
+        from pharma_agents.tools.tooluniverse import PubMedSearchTool
+
+        PubMedSearchTool.reset_counters()
+        tool = PubMedSearchTool()
+        result = tool._run("molecular property prediction")
+
+        assert "Found" in result
+        assert "pmid:" in result
+
+    @pytest.mark.integration
+    @pytest.mark.timeout(30)
+    def test_compound_lookup_with_ethanol(self):
+        """Look up ethanol (simple, well-known molecule)."""
+        from pharma_agents.tools.tooluniverse import CompoundLookupTool
+
+        CompoundLookupTool.reset_counters()
+        tool = CompoundLookupTool()
+        result = tool._run("ethanol")
+
+        assert "PubChem" in result
+        assert "MW:" in result
+
+    @pytest.mark.integration
+    @pytest.mark.timeout(30)
+    def test_compound_lookup_by_smiles(self):
+        """Look up compound by SMILES string."""
+        from pharma_agents.tools.tooluniverse import CompoundLookupTool
+
+        CompoundLookupTool.reset_counters()
+        tool = CompoundLookupTool()
+        result = tool._run("CCO")  # ethanol SMILES
+
+        assert "PubChem" in result
+
+    @pytest.mark.integration
+    @pytest.mark.timeout(60)
+    def test_experimental_validation_format(self):
+        """Validate output format of experimental validation tool."""
+        from pharma_agents.tools.tooluniverse import ExperimentalValidationTool
+
+        ExperimentalValidationTool.reset_counters()
+        tool = ExperimentalValidationTool()
+        result = tool._run('{"smiles_list": ["CCO", "c1ccccc1"], "property": "logP"}')
+
+        assert "Experimental validation" in result
+        assert "SMILES" in result
+        assert "Found experimental data for" in result
+
+    @pytest.mark.integration
+    @pytest.mark.timeout(30)
+    def test_pubmed_search_rate_limit(self):
+        """Verify max_calls_per_run limit."""
+        from pharma_agents.tools.tooluniverse import PubMedSearchTool
+
+        PubMedSearchTool.reset_counters()
+        tool = PubMedSearchTool()
+        tool.max_calls_per_run = 1
+
+        tool._run("test query")
+        result = tool._run("test query 2")
+        assert "Max PubMed searches" in result
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

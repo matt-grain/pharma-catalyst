@@ -252,31 +252,105 @@ Workflow:
 
 ---
 
+## Scientific Data Tools
+
+### `search_pubmed`
+**Used by:** Archivist Agent
+**Source:** `src/pharma_agents/tools/tooluniverse.py`
+
+Searches PubMed for peer-reviewed biomedical papers via NCBI E-utilities (esearch + esummary + efetch for abstracts).
+
+```
+Input: Search query (e.g., "BBBP prediction machine learning")
+Output: List of papers with PMID, title, authors, journal, and abstract
+Limit: 3 searches per iteration
+Rate limit: 0.34s between requests (3 req/s without NCBI_API_KEY)
+```
+
+**Environment:** Set `NCBI_API_KEY` to boost rate limit from 3 to 10 req/s (free key from NCBI).
+
+---
+
+### `lookup_compound`
+**Used by:** Hypothesis Agent
+**Source:** `src/pharma_agents/tools/tooluniverse.py`
+
+Looks up real experimental properties for a molecule from PubChem PUG REST API. Resolves SMILES or compound names to CID, then fetches molecular properties.
+
+```
+Input: SMILES string (e.g., "CCO") or compound name (e.g., "aspirin")
+Output: MW, LogP (XLogP3), TPSA, HBD, HBA, rotatable bonds, canonical SMILES
+Limit: 5 lookups per iteration
+Rate limit: 0.5s between requests
+```
+
+**Resolution strategy:** Tries SMILES → PubChem CID first (heuristic: contains `()=#[]` or short uppercase start), then falls back to name lookup.
+
+---
+
+### `validate_experimental`
+**Used by:** Evaluator Agent
+**Source:** `src/pharma_agents/tools/tooluniverse.py`
+
+Validates model predictions against experimental data from PubChem. Looks up real property values for a list of molecules.
+
+```
+Input: JSON with "smiles_list" (up to 10 SMILES) and "property" (e.g., "logP", "mw", "tpsa")
+Output: ASCII table: SMILES | Experimental Value | Source, with found/total count
+Limit: 3 calls per iteration
+```
+
+**Property mapping:**
+| Input | PubChem Field |
+|-------|---------------|
+| `logP` | XLogP |
+| `mw` | MolecularWeight |
+| `tpsa` | TPSA |
+| `hbd` | HBondDonorCount |
+| `hba` | HBondAcceptorCount |
+
+---
+
 ## Knowledge Tools
+
+### `discover_skills`
+**Used by:** Hypothesis Agent
+**Source:** `src/pharma_agents/tools/skills.py`
+
+Lists available skills with descriptions, filtered by keyword. Parses YAML frontmatter from skill files to extract name and description.
+
+```
+Input: Keyword to filter (e.g., "drug", "compound", "molecular") or "all"
+Output: List of matching skill names with truncated descriptions
+```
+
+**Search scope:** Scans three locations:
+1. `.claude/skills/scientific/*.md` — flat scientific skills (rdkit, deepchem, etc.)
+2. `.claude/skills/*.md` — root-level skills
+3. `.claude/skills/*/SKILL.md` — directory-based skills (tooluniverse-*)
+
+**Typical workflow:** Agent calls `discover_skills("drug")` → sees 16 matching skills → calls `load_skill("tooluniverse-drug-research")` to load the one it needs.
+
+---
 
 ### `load_skill`
 **Used by:** Hypothesis Agent
 **Source:** `src/pharma_agents/tools/skills.py`
 
-Loads a scientific skill for domain knowledge and code examples.
+Loads a skill by name to get domain knowledge, code examples, or workflow guides. Use `discover_skills` first to find available skills.
 
 ```
-Input: Skill name (e.g., "rdkit", "deepchem", "molfeat")
-Output: Skill content with best practices and examples (max 8000 chars)
+Input: Skill name (e.g., "rdkit", "tooluniverse-drug-research")
+Output: Full skill content (max 8000 chars, truncated if longer)
 Limit: 3 skills per iteration
 ```
 
-**Available skills:**
-| Skill | Description |
-|-------|-------------|
-| `rdkit` | Molecular featurization, fingerprints, descriptors |
-| `deepchem` | Deep learning for drug discovery |
-| `datamol` | Molecular data manipulation |
-| `molfeat` | Molecular feature extraction |
-| `pytdc` | Therapeutics Data Commons datasets |
-| `chembl-database` | ChEMBL bioactivity data access |
-| `pubchem-database` | PubChem compound database |
-| `literature-review` | Systematic literature review methodology |
+**Search paths (tried in order):**
+1. `.claude/skills/scientific/<name>.md`
+2. `.claude/skills/<name>.md`
+3. `.claude/skills/<name>/SKILL.md`
+
+**Available skills include:** rdkit, deepchem, datamol, molfeat, pytdc, chembl-database, pubchem-database, literature-review, plus 15 tooluniverse-* workflow playbooks (drug-research, literature-deep-research, chemical-compound-retrieval, chemical-safety, drug-repurposing, target-research, etc.)
 
 ---
 
@@ -290,6 +364,9 @@ Tools with `reset_counters()` classmethod:
 - `FetchMorePapersTool` — resets `_calls_done`
 - `InstallPackageTool` — resets `_packages_installed`
 - `SkillLoaderTool` — resets `_skills_loaded`
+- `PubMedSearchTool` — resets `_calls_done`, `_last_call`
+- `CompoundLookupTool` — resets `_calls_done`, `_last_call`
+- `ExperimentalValidationTool` — resets `_calls_done`
 
 ---
 
@@ -309,6 +386,10 @@ Tools with `reset_counters()` classmethod:
 | `store_paper` | — | — | default (cached) |
 | `query_literature` | — | — | default (cached) |
 | `fetch_more_papers` | — | 2 calls | **disabled** |
+| `search_pubmed` | 0.34s interval | 3 searches | **disabled** |
+| `lookup_compound` | 0.5s interval | 5 lookups | **disabled** |
+| `validate_experimental` | 0.3s/molecule | 3 calls | **disabled** |
+| `discover_skills` | — | — | default (cached) |
 | `load_skill` | — | 3 skills | default (cached) |
 
 ---
@@ -347,4 +428,4 @@ class MyTool(BaseTool):
 
 ---
 
-*Tools are defined in `src/pharma_agents/tools/` — split by domain: `training.py`, `arxiv.py`, `literature.py`, `skills.py`, `evaluate.py`*
+*Tools are defined in `src/pharma_agents/tools/` — split by domain: `training.py`, `arxiv.py`, `literature.py`, `skills.py`, `tooluniverse.py`*

@@ -56,6 +56,30 @@ with urllib.request.urlopen(req) as resp:
     print(json.loads(resp.read()))
 ```
 
+## Mailbox Response Hints
+
+The `GET /mailbox/{id}` response now includes three helper fields:
+
+- **`response_hint`** — Tells you the agent type, expected format, and gives an example response.
+  Detects hypothesis, implementation, evaluator, review panel experts, and moderator automatically.
+- **`react_tools`** — Extracted from the CrewAI prompt: tool name → params (with types and required flags).
+  Use this to get the correct parameter names for `Action Input`.
+- **`tool_schemas`** — OpenAI function call schemas (for structured output tools like `HypothesisOutput`).
+
+Example `response_hint` for a hypothesis agent request:
+```json
+{
+  "agent": "hypothesis",
+  "format": "ReAct then structured JSON",
+  "react_example": "Thought: ...\nAction: search_tooluniverse\nAction Input: {\"query\": \"<string>\"}",
+  "final_answer_example": {"proposal": "...", "reasoning": "...", ...}
+}
+```
+
+**Critical:** Always check `react_tools` for the correct parameter names. CrewAI will
+silently fail if you use `{"argument": "..."}` instead of `{"query": "..."}` — it retries
+from scratch without any error message, wasting all 3 attempts.
+
 ## How to Answer Each Agent
 
 The pipeline makes LLM calls in this order. Each agent type has a different
@@ -65,8 +89,31 @@ response format — getting it wrong causes retries and wasted requests.
 
 **How to detect:** `tools` field contains `HypothesisOutput`.
 
-**Format:** Pure JSON object matching HypothesisOutput schema. The server
-auto-wraps it as an OpenAI `tool_calls` response (CrewAI/instructor requires this).
+The hypothesis agent operates in **two modes**:
+
+**Mode A — ReAct tool usage (intermediate calls):**
+The agent has access to tools like `search_tooluniverse`, `query_literature`,
+`discover_skills`, `load_skill`, `lookup_compound`, `fetch_more_papers`, and
+`read_train_py`. When it calls a tool via ReAct format, CrewAI executes the tool
+locally and returns the result as an Observation. The LLM then gets called again
+with the observation in context (message_count > 1).
+
+```
+Thought: I should search for validated toxicity prediction approaches.
+Action: search_tooluniverse
+Action Input: {"query": "toxicity prediction"}
+```
+
+**CRITICAL:** Use `react_tools` from the mailbox response to get correct param names.
+Common mistakes:
+- `search_tooluniverse` takes `{"query": "..."}` NOT `{"argument": "..."}`
+- `lookup_compound` takes `{"compound": "..."}` NOT `{"argument": "..."}`
+- `discover_skills` takes `{"keyword": "..."}` NOT `{"argument": "..."}`
+- `query_literature` takes `{"query": "..."}` NOT `{"argument": "..."}`
+
+**Mode B — Final structured output:**
+After using tools (or skipping them), respond with pure JSON matching HypothesisOutput.
+The server auto-wraps it as an OpenAI `tool_calls` response (CrewAI/instructor requires this).
 
 ```json
 {
@@ -215,6 +262,23 @@ A complete iteration produces ~19 requests:
 | 8-15 | Implementation | CrewAI | ReAct (Thought/Action) |
 | 16-19 | Evaluator | CrewAI | ReAct (Thought/Action) |
 
+## New Tools (added 2026-03-16)
+
+These tools call real external APIs — they work even with the mock server.
+The LLM doesn't call them directly; CrewAI executes them locally based on ReAct actions.
+
+| Tool | Agent | API | Parameter |
+|------|-------|-----|-----------|
+| `search_tooluniverse` | Hypothesis | aiscientist.tools catalog (1,936 tools) | `{"query": "toxicity prediction"}` |
+| `search_pubmed` | Archivist | NCBI E-utilities (PubMed) | `{"query": "ClinTox toxicity ML"}` |
+| `lookup_compound` | Hypothesis | PubChem PUG REST | `{"compound": "aspirin"}` or `{"compound": "CCO"}` |
+| `validate_experimental` | Evaluator | PubChem PUG REST | `{"smiles_list": ["CCO"], "property": "logP"}` |
+| `discover_skills` | Hypothesis | Local skill files | `{"keyword": "drug"}` or `{"keyword": "all"}` |
+
+**Note:** When using the mock server, these tools produce real results (network calls)
+while the LLM reasoning is mocked. This means the hypothesis agent will see actual
+ToolUniverse search results, PubMed papers, and PubChem compound data in its context.
+
 ## Known Issues (from live testing 2026-03-15)
 
 ### 1. F-string double-encoding
@@ -246,3 +310,13 @@ tool that accepts line-range patches instead of full rewrites.
 The evaluator can read and run train.py but can't see what changed from
 baseline. It reports the score but can't explain the delta. Minor issue —
 the hypothesis context already describes the change.
+
+### 6. Wrong parameter names cause silent retries (2026-03-16)
+CrewAI tools have specific parameter names (e.g., `query`, `compound`, `keyword`).
+If the mock responder sends the wrong param name (e.g., `{"argument": "toxicity"}`
+instead of `{"query": "toxicity"}`), CrewAI silently fails the tool call and
+retries the entire task from scratch — no error message, just a fresh request
+with `message_count=1`. After `max_iter` retries, the task fails.
+**Mitigation:** Always check the `react_tools` field in `GET /mailbox/{id}` —
+it shows the exact parameter names and types extracted from the CrewAI prompt.
+The `response_hint` field also provides a ready-to-use example.

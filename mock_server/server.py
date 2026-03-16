@@ -212,15 +212,193 @@ def _terminal_response(
     return raw_response
 
 
+def _build_response_hint(entry: dict) -> dict:
+    """Build a hint explaining the expected response format for this request."""
+    tools = entry.get("tools", [])
+    messages = entry.get("messages", [])
+    content = messages[-1].get("content", "") if messages else ""
+    react_tools = entry.get("react_tools", {})
+
+    # Detect agent type from content and tools
+    if "HypothesisOutput" in tools:
+        if react_tools:
+            # ReAct mode — agent can use tools first, then give final answer
+            tool_examples = []
+            for tname, tinfo in list(react_tools.items())[:3]:
+                params = tinfo.get("params", {})
+                example_params = {
+                    k: f"<{v.get('type', 'string')}>"
+                    for k, v in params.items()
+                    if v.get("required", False)
+                }
+                tool_examples.append(
+                    f"Action: {tname}\nAction Input: {json.dumps(example_params)}"
+                )
+            return {
+                "agent": "hypothesis",
+                "format": "ReAct then structured JSON",
+                "instructions": (
+                    "Use tools first via ReAct format, then give Final Answer as JSON. "
+                    "OR skip tools and respond with raw HypothesisOutput JSON directly."
+                ),
+                "react_example": (
+                    "Thought: I need to search for existing approaches.\n"
+                    + (
+                        tool_examples[0]
+                        if tool_examples
+                        else 'Action: query_literature\nAction Input: {"query": "toxicity"}'
+                    )
+                ),
+                "final_answer_example": {
+                    "proposal": "Add MACCS keys fingerprints...",
+                    "reasoning": "MACCS keys capture toxicophore substructures...",
+                    "change_description": "In train.py, add MACCSkeys...",
+                    "literature_insight": "Recent papers suggest...",
+                },
+            }
+        else:
+            return {
+                "agent": "hypothesis",
+                "format": "raw JSON (auto-wrapped as tool_call)",
+                "example": {
+                    "proposal": "...",
+                    "reasoning": "...",
+                    "change_description": "...",
+                    "literature_insight": "...",
+                },
+            }
+
+    if "Implement the following APPROVED proposal" in content:
+        return {
+            "agent": "implementation",
+            "format": "ReAct (Thought/Action/Action Input)",
+            "available_tools": {
+                k: {
+                    p: v.get("type", "string")
+                    for p, v in info.get("params", {}).items()
+                }
+                for k, info in react_tools.items()
+            },
+            "example": (
+                "Thought: I need to read the current code.\n"
+                "Action: read_train_py\n"
+                'Action Input: {"argument": "outline"}'
+            ),
+        }
+
+    if "Run the modified train.py and evaluate" in content:
+        return {
+            "agent": "evaluator",
+            "format": "ReAct (Thought/Action/Action Input)",
+            "available_tools": {
+                k: {
+                    p: v.get("type", "string")
+                    for p, v in info.get("params", {}).items()
+                }
+                for k, info in react_tools.items()
+            },
+            "example": (
+                "Thought: I need to run the training script.\n"
+                "Action: run_train_py\n"
+                'Action Input: {"argument": "run"}'
+            ),
+        }
+
+    # AG2 review panel — no tools, plain text or moderator JSON
+    last_name = ""
+    for msg in messages:
+        if msg.get("name"):
+            last_name = msg["name"]
+
+    if last_name == "Moderator" or "Moderator" in content:
+        return {
+            "agent": "review_panel_moderator",
+            "format": "JSON verdict",
+            "example": {
+                "decision": "approved",
+                "feedback": "Panel finds proposal well-grounded...",
+                "confidence": 0.82,
+                "concerns": ["Monitor feature correlation"],
+            },
+        }
+
+    if any(
+        name in content
+        for name in ["Statistician", "Medicinal_Chemist", "Devils_Advocate"]
+    ):
+        return {
+            "agent": "review_panel_expert",
+            "format": "plain text (3-5 sentences of expert critique)",
+            "example": "The proposal is statistically sound. Adding 167 MACCS features to 1400 ClinTox samples maintains a safe features-to-samples ratio...",
+        }
+
+    return {"agent": "unknown", "format": "plain text or JSON"}
+
+
+def _extract_react_tools(messages: list[dict]) -> dict[str, dict]:
+    """Extract ReAct tool names and their required params from CrewAI prompt text.
+
+    CrewAI embeds tool schemas in the user message like:
+        Tool Name: search_tooluniverse
+        Tool Arguments: { "properties": { "query": { ... } }, "required": ["query"] }
+        Tool Description: ...
+    """
+    import re
+
+    react_tools: dict[str, dict] = {}
+    content = messages[-1].get("content", "") if messages else ""
+
+    # Find all Tool Name: ... blocks
+    pattern = r"Tool Name:\s*(\w+)\s*\nTool Arguments:\s*(\{.*?\})\s*\nTool Description:\s*(.*?)(?=\nTool Name:|\nIMPORTANT:|\n\n)"
+    for match in re.finditer(pattern, content, re.DOTALL):
+        name = match.group(1)
+        try:
+            schema = json.loads(match.group(2))
+            props = schema.get("properties", {})
+            required = schema.get("required", [])
+            params = {}
+            for pname, pinfo in props.items():
+                params[pname] = {
+                    "type": pinfo.get("type", "string"),
+                    "required": pname in required,
+                }
+                if "default" in pinfo:
+                    params[pname]["default"] = pinfo["default"]
+            react_tools[name] = {
+                "params": params,
+                "description": match.group(3).strip()[:120],
+            }
+        except json.JSONDecodeError:
+            react_tools[name] = {
+                "params": {},
+                "description": match.group(3).strip()[:120],
+            }
+
+    return react_tools
+
+
 def _mailbox_response(
     req_id: int, messages: list[dict], model: str, tools: list
 ) -> str:
     """Queue request and wait for response via mailbox API."""
     event = Event()
+    # Store both tool names and full schemas for the mailbox detail view
+    tool_names = [t["function"]["name"] for t in tools] if tools else []
+    tool_schemas = (
+        {t["function"]["name"]: t["function"].get("parameters", {}) for t in tools}
+        if tools
+        else {}
+    )
+
+    # Extract ReAct tool schemas from the prompt text (CrewAI embeds them)
+    react_tools = _extract_react_tools(messages)
+
     entry = {
         "messages": messages,
         "model": model,
-        "tools": [t["function"]["name"] for t in tools] if tools else [],
+        "tools": tool_names,
+        "tool_schemas": tool_schemas,
+        "react_tools": react_tools,
         "event": event,
         "response": None,
         "timestamp": time.time(),
@@ -377,12 +555,19 @@ async def get_pending_request(request_id: int) -> JSONResponse:
             )
         # Suggest canned responses
         suggestions = match_canned_responses(entry["messages"])
+
+        # Build response format hint based on what kind of agent this is
+        response_hint = _build_response_hint(entry)
+
         return JSONResponse(
             {
                 "request_id": request_id,
                 "model": entry["model"],
                 "messages": entry["messages"],
                 "tools": entry["tools"],
+                "tool_schemas": entry.get("tool_schemas", {}),
+                "react_tools": entry.get("react_tools", {}),
+                "response_hint": response_hint,
                 "age_seconds": round(time.time() - entry["timestamp"], 1),
                 "suggested_canned": [
                     {

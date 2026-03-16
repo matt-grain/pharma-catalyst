@@ -17,14 +17,19 @@ from pydantic import BaseModel
 
 from .tools import (
     CodeCheckTool,
+    CompoundLookupTool,
+    ExperimentalValidationTool,
     FetchMorePapersTool,
     InstallPackageTool,
     LiteratureQueryTool,
+    PubMedSearchTool,
     ReadTrainPyTool,
     RemovePaperTool,
     RunTrainPyTool,
     SearchAndStoreTool,
+    SkillDiscoveryTool,
     SkillLoaderTool,
+    ToolUniverseSearchTool,
     WriteTrainPyTool,
     EditTrainPyTool,
     SearchTrainPyTool,
@@ -200,6 +205,7 @@ class PharmaAgentsCrew:
             llm=get_llm(),
             tools=[
                 SearchAndStoreTool(),
+                PubMedSearchTool(),
                 RemovePaperTool(),
             ],
             max_iter=20,
@@ -216,8 +222,11 @@ class PharmaAgentsCrew:
             tools=[
                 ReadTrainPyTool(),
                 LiteratureQueryTool(),
+                SkillDiscoveryTool(),
                 SkillLoaderTool(),
                 FetchMorePapersTool(),  # Request fresh papers when stuck
+                CompoundLookupTool(),
+                ToolUniverseSearchTool(),
             ],
             max_iter=15,
             max_execution_time=300,  # 5 min — mostly LLM reasoning
@@ -252,6 +261,7 @@ class PharmaAgentsCrew:
             tools=[
                 ReadTrainPyTool(),
                 RunTrainPyTool(),
+                ExperimentalValidationTool(),
             ],
             max_iter=10,
             max_execution_time=300,  # 5 min — includes training timeout

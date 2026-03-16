@@ -22,6 +22,13 @@ archivist_task:
        - "graph neural network molecular property"
        - "ADMET prediction machine learning"
        Do 3-5 searches. Each returns ~3 relevant papers.
+    3. PUBMED ENRICHMENT — After arxiv searches, run 1-2 PubMed searches
+       using search_pubmed tool with queries like:
+       - "{property} prediction machine learning"
+       - "QSAR {property} deep learning"
+       PubMed returns peer-reviewed articles (not just preprints).
+       Note: PubMed results are for context only, they are NOT auto-stored
+       in the literature database.
        IMPORTANT: Do ONE search at a time, then filter, then next search.
 
     2. FILTER PHASE — After EACH search_and_store, review the stored papers.
@@ -57,19 +64,30 @@ hypothesis_task:
 
     This run's experiments: {experiment_history}
 
-    FIRST: Query the literature database for recent techniques (use query_literature tool)
+    FIRST: Search for validated tools and ML models relevant to {property} prediction
+    using search_tooluniverse (e.g., "solubility prediction", "BBB", "toxicity").
+    This reveals what approaches have been validated by the scientific community.
+
+    THEN: Query the literature database for recent techniques (use query_literature tool)
     with queries like "gradient boosting features" or "attention mechanism molecular".
 
     IF you're stuck or need fresh ideas:
     - Use fetch_more_papers tool with a specific query (e.g., "molecular descriptors solubility")
     - This searches arxiv for new papers and adds them to your literature database
     - Then query_literature again to find relevant techniques
+    - Use discover_skills("molecular") to find relevant skill playbooks,
+      then load_skill("<name>") to get detailed workflow guides and code patterns
 
     Based on the memory AND literature insights, propose ONE specific change that:
     1. Is DIFFERENT from what failed before (check "What Failed" section!)
     2. Builds on what worked (check "What Worked" section)
     3. Is informed by recent research (check literature query results)
     4. Is specific and implementable in train.py
+
+    IF the dataset contains SMILES strings for specific molecules:
+    - Use lookup_compound tool to check real experimental properties (logP, MW, TPSA)
+      for 1-2 representative molecules from the dataset
+    - Use these real values to calibrate your hypothesis (e.g., feature ranges, thresholds)
 
     Output format:
     LITERATURE INSIGHT: [what the recent papers suggest]
@@ -120,6 +138,11 @@ evaluate_task:
     2. The tool returns "{metric}:X.XXXX" - extract this value
     3. Compare to baseline {baseline_score} using the direction above
     4. Recommend: KEEP (if improved) or REVERT (if worse or equal)
+
+    5. (OPTIONAL) If the model improved, use validate_experimental to check
+       predictions against real experimental values for 3-5 sample molecules.
+       Input format: {{"smiles_list": ["CCO", "c1ccccc1"], "property": "logP"}}
+       This adds confidence to the evaluation but is not required for the recommendation.
 
     The train() function MUST print the result as: ###RESULT### {metric}: score
 

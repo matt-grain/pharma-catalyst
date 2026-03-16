@@ -54,9 +54,9 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 **Tools:**
 | Tool | Description |
 |------|-------------|
-| `search_arxiv` | Search arxiv API for papers on ADMET, GNNs, fingerprints |
-| `fetch_arxiv_paper` | Get paper summaries via alphaxiv (or arxiv fallback) |
-| `store_paper` | Save with fastembed embeddings for semantic search |
+| `search_and_store` | Search arxiv and auto-store results with embeddings |
+| `search_pubmed` | Search PubMed for peer-reviewed papers (NCBI E-utilities) |
+| `remove_paper` | Remove irrelevant papers from the literature database |
 
 **When Active:**
 - **Standalone** via `uv run python -m pharma_agents.research -e <experiment>` — builds/refreshes the literature database before any run. Lets a human DS review what papers the agents will draw from.
@@ -75,12 +75,12 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 │                                                                 │
 │     ┌─────────────────────────────────────────────────┐        │
 │     │                INPUTS                           │        │
-│     │  ┌───────────┐  ┌───────────┐  ┌───────────┐   │        │
-│     │  │  MEMORY   │  │ LITERATURE│  │   SKILLS  │   │        │
-│     │  │ (what     │  │ (recent   │  │ (rdkit,   │   │        │
-│     │  │  worked/  │  │  papers)  │  │  deepchem)│   │        │
-│     │  │  failed)  │  │           │  │           │   │        │
-│     │  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘   │        │
+│     │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────┐ │        │
+│     │  │ MEMORY  │ │LITERATUR│ │ SKILLS  │ │PUBCHEM│ │        │
+│     │  │ (what   │ │ (recent │ │(discover│ │(real  │ │        │
+│     │  │ worked/ │ │ papers) │ │ + load) │ │ MW,   │ │        │
+│     │  │ failed) │ │         │ │         │ │ logP) │ │        │
+│     │  └────┬────┘ └────┬────┘ └────┬────┘ └───┬───┘ │        │
 │     │        │              │              │         │        │
 │     │        └──────────────┼──────────────┘         │        │
 │     │                       │                        │        │
@@ -116,10 +116,12 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 |------|-------------|
 | `read_train_py` | Understand current implementation |
 | `query_literature` | Semantic search over recent papers |
-| `load_skill` | Load scientific skills (rdkit, deepchem patterns) |
+| `discover_skills` | Find available skills by keyword (e.g., "drug", "molecular") |
+| `load_skill` | Load a skill for domain knowledge and workflow guides |
 | `fetch_more_papers` | Request fresh papers when stuck |
+| `lookup_compound` | Look up real molecular properties from PubChem (MW, logP, TPSA) |
 
-**Strategy:** Combine memory of past experiments + literature insights to propose novel approaches
+**Strategy:** Combine memory of past experiments + literature insights + real compound data to propose novel approaches
 
 ---
 
@@ -235,6 +237,7 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 |------|-------------|
 | `read_train_py` | Review implementation |
 | `run_train_py` | Execute and extract metric |
+| `validate_experimental` | Validate predictions against PubChem experimental values |
 
 **Output:** KEEP (if improved) or REVERT (if worse/equal)
 

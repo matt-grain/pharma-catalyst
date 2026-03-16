@@ -8,7 +8,13 @@ from .literature import (
     RemovePaperTool,
     get_literature_dir,
 )
-from .skills import SkillLoaderTool
+from .skills import SkillDiscoveryTool, SkillLoaderTool
+from .tooluniverse import (
+    CompoundLookupTool,
+    ExperimentalValidationTool,
+    PubMedSearchTool,
+    ToolUniverseSearchTool,
+)
 from .training import (
     CodeCheckTool,
     EditTrainPyTool,
@@ -39,5 +45,11 @@ __all__ = [
     "RunTrainPyTool",
     "InstallPackageTool",
     # Skills
+    "SkillDiscoveryTool",
     "SkillLoaderTool",
+    # ToolUniverse
+    "PubMedSearchTool",
+    "CompoundLookupTool",
+    "ExperimentalValidationTool",
+    "ToolUniverseSearchTool",
 ]

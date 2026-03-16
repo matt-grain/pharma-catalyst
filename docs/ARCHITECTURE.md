@@ -15,6 +15,7 @@ Pharma-agents is an autonomous multi-agent system that iteratively improves mole
 | ML Framework | scikit-learn, RDKit, XGBoost, LightGBM, TF/Keras... |
 | Package Manager | uv |
 | Linting | ruff |
+| PubMed/PubChem/ChEMBL | Direct REST API wrappers (NCBI E-utilities, PUG REST) |
 | Version Control | Git (worktrees for isolation) |
 
 ## Project Structure
@@ -36,7 +37,8 @@ pharma-agents/
 │       ├── arxiv.py         # ArxivSearchTool, AlphaxivTool
 │       ├── literature.py    # LiteratureStoreTool, LiteratureQueryTool
 │       ├── training.py      # ReadTrainPy, WriteTrainPy, CodeCheck, RunTrainPy
-│       └── skills.py        # SkillLoaderTool (load scientific skills)
+│       ├── skills.py        # SkillDiscoveryTool, SkillLoaderTool
+│       └── tooluniverse.py  # PubMedSearch, CompoundLookup, ExperimentalValidation
 ├── experiments/
 │   └── <experiment>/        # e.g., bbbp/
 │       ├── baseline.json    # Baseline metric & config
@@ -89,7 +91,9 @@ class PharmaAgentsCrew:
         return Agent(
             config=self.agents_config["hypothesis_agent"],
             llm=get_llm(),
-            tools=[ReadTrainPyTool(), LiteratureQueryTool(), SkillLoaderTool()],
+            tools=[ReadTrainPyTool(), LiteratureQueryTool(),
+                   SkillDiscoveryTool(), SkillLoaderTool(),
+                   CompoundLookupTool()],
         )
 
     @crew
@@ -135,9 +139,11 @@ class PharmaAgentsCrew:
 │  │     AGENT       │ → │     AGENT       │ → │     AGENT       │          │
 │  ├─────────────────┤   ├─────────────────┤   ├─────────────────┤          │
 │  │ query_literature│   │ read_train_py   │   │ run_train_py    │          │
-│  │ read_train_py   │   │ write_train_py  │   │ compare baseline│          │
-│  │ load_skill      │   │ code_check      │   │ KEEP or REVERT  │          │
-│  │ fetch_more_papers│  │ install_package │   │                 │          │
+│  │ read_train_py   │   │ write_train_py  │   │ validate_experi.│          │
+│  │ discover_skills │   │ code_check      │   │ compare baseline│          │
+│  │ load_skill      │   │ install_package │   │ KEEP or REVERT  │          │
+│  │ lookup_compound │   │                 │   │                 │          │
+│  │ fetch_more_papers│  │                 │   │                 │          │
 │  └─────────────────┘   └─────────────────┘   └─────────────────┘          │
 │         │                      │                      │                    │
 │         ▼                      ▼                      ▼                    │
@@ -183,7 +189,11 @@ class PharmaAgentsCrew:
 | `CodeCheckTool` | training.py | Run ruff linter on train.py |
 | `RunTrainPyTool` | training.py | Execute training, extract metric |
 | `InstallPackageTool` | training.py | Install whitelisted ML packages via uv |
+| `SkillDiscoveryTool` | skills.py | List available skills filtered by keyword |
 | `SkillLoaderTool` | skills.py | Load scientific skills (rdkit patterns, etc.) |
+| `PubMedSearchTool` | tooluniverse.py | Search PubMed + Semantic Scholar |
+| `CompoundLookupTool` | tooluniverse.py | PubChem/ChEMBL compound properties |
+| `ExperimentalValidationTool` | tooluniverse.py | Validate predictions vs experimental data |
 
 ### Why Custom Tools?
 
@@ -264,6 +274,33 @@ Each run operates in an isolated git worktree:
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+## Scientific Data Integration (PubMed, PubChem, ChEMBL)
+
+Direct REST API wrappers for biomedical literature and compound databases.
+No heavy SDK dependencies — just urllib calls to public APIs.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                   SCIENTIFIC DATA TOOLS                          │
+│                                                                  │
+│  Agent Tool Wrappers (CrewAI BaseTool)                          │
+│  ├── PubMedSearchTool ──► NCBI E-utilities (esearch/esummary)   │
+│  ├── CompoundLookupTool ──► PubChem PUG REST API                │
+│  └── ExperimentalValidationTool ──► PubChem property lookups    │
+│                                                                  │
+│  Skill Playbooks (.claude/skills/tooluniverse-*/SKILL.md)       │
+│  └── 15 curated pharma workflows loaded via SkillLoaderTool     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Direct REST over SDK | ToolUniverse SDK has heavy transitive deps (torch, chemprop); REST is zero-dep |
+| PubChem PUG REST for compounds | Free, no API key, comprehensive molecular properties |
+| 15 curated ToolUniverse skills | Workflow playbooks for agents, loaded via SkillLoaderTool |
+
 ## Configuration
 
 ### Environment Variables
@@ -274,6 +311,7 @@ Each run operates in an isolated git worktree:
 | `LLM_MODEL` | LLM model string | `gemini/gemini-3-flash-preview` |
 | `GOOGLE_API_KEY` | Gemini API key | Required |
 | `PHARMA_EXPERIMENTS_DIR` | Override experiments path | (auto-detected) |
+| `NCBI_API_KEY` | PubMed rate boost (3→10 req/s) | Optional |
 
 ### Baseline Config
 
