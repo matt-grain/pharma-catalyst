@@ -8,7 +8,12 @@ from .literature import (
     RemovePaperTool,
     get_literature_dir,
 )
-from .knowledge_base import KnowledgeQueryTool, ReadKnowledgeSourceTool, get_kb_dir, rebuild_index
+from .knowledge_base import (
+    KnowledgeQueryTool,
+    ReadKnowledgeSourceTool,
+    get_kb_dir,
+    rebuild_index,
+)
 from .skills import SkillDiscoveryTool, SkillLoaderTool
 from .tooluniverse import (
     CompoundLookupTool,
