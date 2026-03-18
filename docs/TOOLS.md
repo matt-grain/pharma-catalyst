@@ -344,6 +344,10 @@ The following ranges are derived from analysis of our internal CNS compound libr
 Performance thresholds (per SOP-ML-VAL-003): ROC-AUC >= 0.85...
 ```
 
+**Output formatting:**
+- CSV chunks shown **in full** (already bounded at 10 rows per chunk — agent needs complete data)
+- Markdown chunks truncated at 500 chars (enough for context, use `read_kb_source` for full content)
+
 **Supported document formats:**
 - Markdown (`.md`) — chunked at `## ` heading boundaries with overlap
 - CSV (`.csv`) — rows converted to natural language, batched in groups of 10
@@ -353,6 +357,27 @@ Performance thresholds (per SOP-ML-VAL-003): ROC-AUC >= 0.85...
 uv run python -m pharma_agents.ingest_kb -e bbbp
 ```
 Use this after adding new documents to the knowledge base directory. The index also auto-builds on first query if missing.
+
+---
+
+### `read_kb_source`
+**Used by:** Hypothesis Agent
+**Source:** `src/pharma_agents/tools/knowledge_base.py`
+
+Read the full content of a knowledge base source file. Use after `query_knowledge_base` when the agent needs the complete document or dataset (especially CSV files).
+
+```
+Input: source_file path from a search result (e.g., "assay_data/bbb_pampa_assay_results.csv")
+Output: Full file content (up to 5000 chars)
+```
+
+**Security:** Path traversal guard — rejects any path that resolves outside the knowledge base directory.
+
+**Typical workflow:**
+1. `query_knowledge_base("PAMPA assay results")` → sees partial CSV rows in results
+2. `read_kb_source("assay_data/bbb_pampa_assay_results.csv")` → gets all 50 rows
+
+See [docs/RAG.md](RAG.md) for the full retrieval flow diagram.
 
 ---
 
@@ -435,6 +460,7 @@ Tools with `reset_counters()` classmethod:
 | `lookup_compound` | 0.5s interval | 5 lookups | **disabled** |
 | `validate_experimental` | 0.3s/molecule | 3 calls | **disabled** |
 | `query_knowledge_base` | — | — | default (cached) |
+| `read_kb_source` | — | — | default (cached) |
 | `discover_skills` | — | — | default (cached) |
 | `load_skill` | — | 3 skills | default (cached) |
 
