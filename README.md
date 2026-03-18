@@ -2,7 +2,7 @@
 
 **Self-improving AI agents for molecular property prediction.**
 
-Built with CrewAI, featuring persistent cross-run memory, automatic stuck detection, and exploration mode to escape local optima. Demonstrated on ESOL solubility prediction: **1.32 → 0.65 RMSE (50.4% improvement)** in 6 autonomous iterations.
+Built with CrewAI, featuring persistent cross-run memory, hybrid RAG knowledge base (BM25 + dense + RRF), automatic stuck detection, and exploration mode to escape local optima. Demonstrated on ESOL solubility prediction: **1.32 → 0.65 RMSE (50.4% improvement)** in 6 autonomous iterations.
 
 Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) — applied to drug discovery ML.
 
@@ -231,6 +231,7 @@ pharma-catalyst/
 │   │   ├── training.py          # Read/Write/Run train.py, CodeCheck, InstallPackage
 │   │   ├── evaluate.py          # Fixed evaluation harness
 │   │   ├── arxiv.py             # Arxiv search + paper fetching
+│   │   ├── knowledge_base.py     # Knowledge base RAG (hybrid BM25+dense+RRF)
 │   │   ├── literature.py        # Literature storage + semantic query
 │   │   ├── skills.py            # Scientific skill loader
 │   │   └── reset.py             # Reset train.py to baseline
@@ -242,6 +243,7 @@ pharma-catalyst/
 │       ├── baseline.json        # Baseline config (metric, score, direction)
 │       ├── baseline_train.py    # BASELINE code (never modified by agents)
 │       ├── memory.json          # Persistent agent memory (shared)
+│       ├── knowledge_base/       # Internal docs for RAG (reports, assays, SOPs)
 │       ├── literature/          # Literature DB (built by research command)
 │       │   ├── index.json       # Search index with embeddings
 │       │   └── papers/          # Markdown summaries

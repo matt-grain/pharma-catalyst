@@ -311,7 +311,52 @@ Limit: 3 calls per iteration
 
 ---
 
-## Knowledge Tools
+## Knowledge Base Tools (Hybrid RAG)
+
+### `query_knowledge_base`
+**Used by:** Hypothesis Agent
+**Source:** `src/pharma_agents/tools/knowledge_base.py`
+
+Hybrid search over the internal knowledge base using BM25 (sparse) + dense embeddings + Reciprocal Rank Fusion. Returns top results with source file and section attribution.
+
+```
+Input: Search query (e.g., "BBB physicochemical property ranges")
+Output: Top 5 matching chunks with source attribution and RRF scores
+```
+
+**Retrieval pipeline:**
+1. Embed query with fastembed (BGE-small-en-v1.5)
+2. Tokenize query for BM25
+3. Dense search → top 20 by cosine similarity
+4. Sparse search → top 20 by BM25 score
+5. RRF merge (k=60) → final top 5
+
+**Auto-builds index** on first query if `index.json` doesn't exist. Indexes all `.md` and `.csv` files in the knowledge base directory.
+
+Example output:
+```
+Top 3 results for 'BBB physicochemical property ranges':
+
+--- [Source: internal_reports/cns_drug_design_guidelines_v3.md § BBB-Specific Property Ranges] (score: 0.0312) ---
+The following ranges are derived from analysis of our internal CNS compound library...
+
+--- [Source: safety_docs/bbb_penetration_safety_review.md § Model Validation Requirements] (score: 0.0305) ---
+Performance thresholds (per SOP-ML-VAL-003): ROC-AUC >= 0.85...
+```
+
+**Supported document formats:**
+- Markdown (`.md`) — chunked at `## ` heading boundaries with overlap
+- CSV (`.csv`) — rows converted to natural language, batched in groups of 10
+
+**Rebuild index (CLI, not an agent tool):**
+```bash
+uv run python -m pharma_agents.ingest_kb -e bbbp
+```
+Use this after adding new documents to the knowledge base directory. The index also auto-builds on first query if missing.
+
+---
+
+## Skill Tools
 
 ### `discover_skills`
 **Used by:** Hypothesis Agent
@@ -389,6 +434,7 @@ Tools with `reset_counters()` classmethod:
 | `search_pubmed` | 0.34s interval | 3 searches | **disabled** |
 | `lookup_compound` | 0.5s interval | 5 lookups | **disabled** |
 | `validate_experimental` | 0.3s/molecule | 3 calls | **disabled** |
+| `query_knowledge_base` | — | — | default (cached) |
 | `discover_skills` | — | — | default (cached) |
 | `load_skill` | — | 3 skills | default (cached) |
 
@@ -428,4 +474,4 @@ class MyTool(BaseTool):
 
 ---
 
-*Tools are defined in `src/pharma_agents/tools/` — split by domain: `training.py`, `arxiv.py`, `literature.py`, `skills.py`, `tooluniverse.py`*
+*Tools are defined in `src/pharma_agents/tools/` — split by domain: `training.py`, `arxiv.py`, `literature.py`, `knowledge_base.py`, `skills.py`, `tooluniverse.py`*

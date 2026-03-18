@@ -25,6 +25,7 @@ dependencies = [
     "torch>=2.10.0",
     "deepchem>=2.8.0",
     "catboost>=1.2.10",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]

@@ -1,0 +1,8 @@
+# ClinTox experiment — additional allowed packages.
+# These merge with the global defaults in src/pharma_agents/tool_defaults.yaml.
+
+allowed_packages:
+  # TDC (Therapeutics Data Commons) for benchmark datasets and splits
+  - PyTDC
+  # ADMET-AI for pre-trained toxicity models
+  - admet-ai

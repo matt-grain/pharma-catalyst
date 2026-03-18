@@ -71,6 +71,12 @@ hypothesis_task:
     THEN: Query the literature database for recent techniques (use query_literature tool)
     with queries like "gradient boosting features" or "attention mechanism molecular".
 
+    ALSO: Query the internal knowledge base for domain-specific data (use query_knowledge_base):
+    - Search for relevant internal reports, assay data, SOPs, and safety docs
+    - Example queries: "{property} physicochemical ranges", "historical model performance",
+      "validation requirements", "assay results PAMPA"
+    - Cross-reference literature findings with internal experimental data
+
     IF you're stuck or need fresh ideas:
     - Use fetch_more_papers tool with a specific query (e.g., "molecular descriptors solubility")
     - This searches arxiv for new papers and adds them to your literature database

@@ -47,14 +47,14 @@ def _locked_index(index_path: Path):
 
         if index_path.exists():
             try:
-                index = json.loads(index_path.read_text())
+                index = json.loads(index_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, ValueError):
                 index = {"papers": {}, "created_at": datetime.now().isoformat()}
         else:
             index = {"papers": {}, "created_at": datetime.now().isoformat()}
         yield index
         index["updated_at"] = datetime.now().isoformat()
-        index_path.write_text(json.dumps(index, indent=2))
+        index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
     finally:
         if sys.platform == "win32":
             import msvcrt
@@ -218,7 +218,7 @@ class LiteratureStoreTool(BaseTool):
         index_path = lit_dir / "index.json"
         if index_path.exists():
             try:
-                existing = json.loads(index_path.read_text())
+                existing = json.loads(index_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, ValueError):
                 existing = {"papers": {}}
             if paper_id in existing.get("papers", {}):
@@ -264,7 +264,9 @@ class LiteratureStoreTool(BaseTool):
             # Skip noisy arxiv abstract fallback - only save alphaxiv full content
             is_arxiv_abstract = "(arxiv abstract)" in full_content[:100]
             if not is_arxiv_abstract:
-                (papers_dir / f"{safe_id}_full.md").write_text(full_content)
+                (papers_dir / f"{safe_id}_full.md").write_text(
+                    full_content, encoding="utf-8"
+                )
                 has_full = True
 
         # Build summary markdown with links
@@ -278,7 +280,8 @@ class LiteratureStoreTool(BaseTool):
             f"**PDF:** https://arxiv.org/pdf/{paper_id}.pdf\n"
             f"{full_link}\n"
             f"## Summary\n\n{summary}\n\n"
-            f"## Key Methods\n\n" + "\n".join(f"- {m}" for m in key_methods)
+            f"## Key Methods\n\n" + "\n".join(f"- {m}" for m in key_methods),
+            encoding="utf-8",
         )
 
         return f"Stored paper {paper_id} with embedding ({len(embedding)} dims)."
@@ -323,7 +326,7 @@ class LiteratureQueryTool(BaseTool):
             return "No literature database found. Run the Archivist first to gather papers."
 
         try:
-            index = json.loads(index_path.read_text())
+            index = json.loads(index_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, ValueError):
             return "Literature database is corrupted. Re-run the Archivist to rebuild."
         papers = index.get("papers", {})

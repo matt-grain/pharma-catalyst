@@ -1,0 +1,54 @@
+# Default tool safety configuration.
+# Per-experiment overrides: experiments/<exp>/tool_config.yaml
+# Override files MERGE with defaults (add packages/patterns, not replace).
+
+dangerous_patterns:
+  - "os.system("
+  - "subprocess.run("
+  - "subprocess.call("
+  - "subprocess.Popen("
+  - "shutil.rmtree("
+  - "__import__("
+  - "eval("
+  - "exec("
+  - "os.remove("
+  - "os.rmdir("
+
+allowed_packages:
+  # --- Core scientific computing ---
+  - numpy
+  - scipy
+  - pandas
+
+  # --- ML frameworks ---
+  - scikit-learn
+  - sklearn
+  - xgboost
+  - lightgbm
+  - catboost
+  - imbalanced-learn
+
+  # --- Deep learning ---
+  - tensorflow
+  - keras
+  - torch
+  - pytorch
+  - torch-geometric
+  - dgl
+  - dgllife
+
+  # --- Cheminformatics ---
+  - rdkit
+  - deepchem
+  - chemprop
+  - datamol
+  - molfeat
+  - mordred
+  - descriptastorus
+  - pubchempy
+  - chembl-webresource-client
+
+  # --- Visualization / utilities ---
+  - matplotlib
+  - seaborn
+  - plotly

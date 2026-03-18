@@ -18,21 +18,22 @@ from pydantic import BaseModel
 from .tools import (
     CodeCheckTool,
     CompoundLookupTool,
+    EditTrainPyTool,
     ExperimentalValidationTool,
     FetchMorePapersTool,
     InstallPackageTool,
+    KnowledgeQueryTool,
     LiteratureQueryTool,
     PubMedSearchTool,
     ReadTrainPyTool,
     RemovePaperTool,
     RunTrainPyTool,
     SearchAndStoreTool,
+    SearchTrainPyTool,
     SkillDiscoveryTool,
     SkillLoaderTool,
     ToolUniverseSearchTool,
     WriteTrainPyTool,
-    EditTrainPyTool,
-    SearchTrainPyTool,
 )
 
 
@@ -222,6 +223,7 @@ class PharmaAgentsCrew:
             tools=[
                 ReadTrainPyTool(),
                 LiteratureQueryTool(),
+                KnowledgeQueryTool(),  # Internal reports, assay data, SOPs
                 SkillDiscoveryTool(),
                 SkillLoaderTool(),
                 FetchMorePapersTool(),  # Request fresh papers when stuck
