@@ -435,13 +435,50 @@ class KnowledgeQueryTool(BaseTool):
         for r in results:
             source = r["source_file"]
             section = r["section"]
-            content = r["content"][:300]
+            raw = r["content"]
             score = r["rrf_score"]
+            # CSV data shown in full (already bounded at 10 rows per chunk);
+            # markdown truncated at 500 chars to avoid context bloat
+            is_csv = source.endswith(".csv")
+            content = raw if is_csv else (raw[:500] + "..." if len(raw) > 500 else raw)
             lines.append(
                 f"--- [Source: {source} § {section}] (score: {score:.4f}) ---\n"
-                f"{content}...\n"
+                f"{content}\n"
             )
         return "\n".join(lines)
+
+
+class ReadKnowledgeSourceTool(BaseTool):
+    """Read the full content of a knowledge base source file."""
+
+    name: str = "read_kb_source"
+    description: str = (
+        "Read the full content of a source file from the knowledge base. "
+        "Use this after query_knowledge_base to get the complete document or dataset. "
+        "Input: the source_file path from a search result "
+        "(e.g., 'assay_data/bbb_pampa_assay_results.csv' or "
+        "'internal_reports/bbb_model_benchmark_2024.md')."
+    )
+
+    def _run(self, source_file: str) -> str:
+        """Read full content of a KB source file."""
+        kb_dir = get_kb_dir()
+        file_path = kb_dir / source_file.replace("\\", "/")
+
+        # Security: prevent path traversal
+        try:
+            file_path.resolve().relative_to(kb_dir.resolve())
+        except ValueError:
+            return f"Error: '{source_file}' is outside the knowledge base directory."
+
+        if not file_path.exists():
+            return f"File not found: {source_file}"
+
+        content = file_path.read_text(encoding="utf-8")
+        # Cap at 5000 chars to avoid context explosion
+        if len(content) > 5000:
+            return f"[Source: {source_file}] ({len(content)} chars, showing first 5000)\n\n{content[:5000]}\n\n[... truncated ...]"
+        return f"[Source: {source_file}]\n\n{content}"
 
 
 def rebuild_index(kb_dir: Path | None = None) -> str:

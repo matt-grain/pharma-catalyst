@@ -76,6 +76,8 @@ hypothesis_task:
     - Example queries: "{property} physicochemical ranges", "historical model performance",
       "validation requirements", "assay results PAMPA"
     - Cross-reference literature findings with internal experimental data
+    - If you need full details from a source (especially CSV data), use read_kb_source
+      with the source_file path from the search results
 
     IF you're stuck or need fresh ideas:
     - Use fetch_more_papers tool with a specific query (e.g., "molecular descriptors solubility")

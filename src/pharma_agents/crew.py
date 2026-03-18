@@ -24,6 +24,7 @@ from .tools import (
     InstallPackageTool,
     KnowledgeQueryTool,
     LiteratureQueryTool,
+    ReadKnowledgeSourceTool,
     PubMedSearchTool,
     ReadTrainPyTool,
     RemovePaperTool,
@@ -224,6 +225,7 @@ class PharmaAgentsCrew:
                 ReadTrainPyTool(),
                 LiteratureQueryTool(),
                 KnowledgeQueryTool(),  # Internal reports, assay data, SOPs
+                ReadKnowledgeSourceTool(),  # Read full source after search
                 SkillDiscoveryTool(),
                 SkillLoaderTool(),
                 FetchMorePapersTool(),  # Request fresh papers when stuck

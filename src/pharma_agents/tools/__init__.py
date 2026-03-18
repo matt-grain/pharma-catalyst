@@ -8,7 +8,7 @@ from .literature import (
     RemovePaperTool,
     get_literature_dir,
 )
-from .knowledge_base import KnowledgeQueryTool, get_kb_dir, rebuild_index
+from .knowledge_base import KnowledgeQueryTool, ReadKnowledgeSourceTool, get_kb_dir, rebuild_index
 from .skills import SkillDiscoveryTool, SkillLoaderTool
 from .tooluniverse import (
     CompoundLookupTool,
@@ -33,6 +33,7 @@ __all__ = [
     "SearchAndStoreTool",
     # Knowledge base tools
     "KnowledgeQueryTool",
+    "ReadKnowledgeSourceTool",
     "get_kb_dir",
     "rebuild_index",
     # Literature tools
