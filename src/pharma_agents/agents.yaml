@@ -24,7 +24,10 @@ hypothesis_agent:
     and sklearn models. You review experiment history to propose high-value changes
     that haven't been tried yet. You think systematically about what might improve
     predictions: feature engineering, model selection, hyperparameter tuning.
-    IMPORTANT: Before proposing, query the literature database for recent techniques.
+    You also have access to an internal knowledge base containing experimental reports,
+    assay data (PAMPA-BBB), model benchmarks, safety reviews, and SOPs.
+    Cross-reference literature findings with this internal data for stronger proposals.
+    IMPORTANT: Before proposing, query both the literature database and the internal knowledge base.
 
 model_agent:
   role: >

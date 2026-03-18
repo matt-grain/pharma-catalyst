@@ -3,48 +3,12 @@
 import re
 import subprocess
 import sys
-from typing import Callable, ClassVar, Final
+from typing import Callable, ClassVar
 
 from crewai.tools import BaseTool
 
 from pharma_agents.memory import get_experiments_dir, get_metric_name
-
-# Dangerous patterns blocked in train.py writes/edits
-_DANGEROUS_PATTERNS: Final[tuple[str, ...]] = (
-    "os.system(",
-    "subprocess.run(",
-    "subprocess.call(",
-    "subprocess.Popen(",
-    "shutil.rmtree(",
-    "__import__(",
-    "eval(",
-    "exec(",
-    "os.remove(",
-    "os.rmdir(",
-)
-
-# Allowed packages for InstallPackageTool (ML/data science packages only)
-ALLOWED_PACKAGES = {
-    "lightgbm",
-    "xgboost",
-    "catboost",
-    "scikit-learn",
-    "sklearn",
-    "pandas",
-    "numpy",
-    "scipy",
-    "rdkit",
-    "deepchem",
-    "torch",
-    "pytorch",
-    "tensorflow",
-    "keras",
-    "molfeat",
-    "descriptastorus",
-    "mordred",
-    "pubchempy",
-    "chembl-webresource-client",
-}
+from pharma_agents.tool_config import get_allowed_packages, get_dangerous_patterns
 
 
 class ReadTrainPyTool(BaseTool):
@@ -176,7 +140,7 @@ class WriteTrainPyTool(BaseTool):
             return "Error: train.py must have import statements."
 
         # Block dangerous patterns
-        for pattern in _DANGEROUS_PATTERNS:
+        for pattern in get_dangerous_patterns():
             if pattern in content:
                 return f"Error: Dangerous pattern '{pattern}' not allowed in train.py."
 
@@ -252,7 +216,7 @@ class EditTrainPyTool(BaseTool):
         new_content = content.replace(old_text, new_text, 1)
 
         # Block dangerous patterns in new_text
-        for pattern in _DANGEROUS_PATTERNS:
+        for pattern in get_dangerous_patterns():
             if pattern in new_text:
                 return f"Error: Dangerous pattern '{pattern}' not allowed."
 
@@ -406,10 +370,10 @@ class InstallPackageTool(BaseTool):
         package = package.strip().lower()
 
         # Safety check - only allow whitelisted packages
-        if package not in ALLOWED_PACKAGES:
+        if package not in get_allowed_packages():
             return (
                 f"Error: '{package}' is not in the allowed list. "
-                f"Allowed packages: {', '.join(sorted(ALLOWED_PACKAGES))}"
+                f"Allowed packages: {', '.join(sorted(get_allowed_packages()))}"
             )
 
         # Limit installs per run

@@ -1,5 +1,21 @@
 # Architecture Decision Records
 
+## 2026-03-18 — Hybrid RAG Knowledge Base (BM25 + Dense + RRF)
+
+**Status:** accepted
+**Context:** The hypothesis agent only queries academic papers (arxiv literature database). Real pharma companies have internal data — assay results, model benchmarks, safety reviews, SOPs — that should inform ML decisions. Adding a knowledge base demonstrates practical RAG skills relevant to the Sanofi interview.
+**Decision:** Implement a hybrid retrieval system in `knowledge_base.py` that combines BM25 (sparse/lexical) with dense embeddings (fastembed cosine similarity), merged via Reciprocal Rank Fusion (RRF, k=60). Documents are chunked at section boundaries (markdown) or in 10-row batches (CSV) with 50-word overlap. No new dependencies — BM25 is ~20 lines of math using stdlib, embeddings reuse existing fastembed.
+**Alternatives considered:**
+- Dense-only retrieval (existing literature pattern) — rejected because BM25 catches exact term matches (drug names, specific metrics) that dense embeddings miss.
+- Adding a vector database (ChromaDB, FAISS) — rejected as overkill for <100 documents. JSON index is sufficient and adds no dependency.
+- LLM-based reranking (cross-encoder) — deferred. Would add latency for marginal improvement at this scale.
+- Contextual retrieval (prepend document summary to chunks before embedding) — **implemented**. Each chunk's embedding includes the document title as prefix (e.g., `[From: CNS Drug Design Guidelines] BBB-Specific Property Ranges: ...`), following Anthropic's contextual retrieval cookbook. This captures both local detail and global document context in the vector, improving retrieval for ambiguous queries.
+**Consequences:**
+- No new Python dependencies.
+- Knowledge base lives alongside literature DB, not replacing it (different use cases).
+- Hypothesis agent gains `query_knowledge_base` tool for internal data.
+- Fake but realistic pharma documents demonstrate the concept for the interview.
+
 ## 2026-03-15 — AutoGen for Adversarial Review Panel
 
 **Status:** accepted
