@@ -34,35 +34,35 @@ Two tools work together in a **search → retrieve** pattern:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  HYBRID SEARCH                                                          │
 │                                                                         │
-│  ┌─── PREPARE ──────────────────────────────────────────────────────┐  │
-│  │  query_embedding = fastembed("PAMPA assay BBB permeability")     │  │
-│  │  query_tokens = ["pampa", "assay", "bbb", "permeability"]       │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
+│  ┌─── PREPARE ───────────────────────────────────────────────────────┐  │
+│  │  query_embedding = fastembed("PAMPA assay BBB permeability")      │  │
+│  │  query_tokens = ["pampa", "assay", "bbb", "permeability"]         │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
-│  ┌─── DENSE SEARCH (semantic) ──────────────────────────────────────┐  │
-│  │  cosine_sim(query_emb, chunk_emb) for all 37 chunks              │  │
-│  │  → top 20 by similarity                                          │  │
+│  ┌─── DENSE SEARCH (semantic) ───────────────────────────────────────┐  │
+│  │  cosine_sim(query_emb, chunk_emb) for all 37 chunks               │  │
+│  │  → top 20 by similarity                                           │  │
 │  │                                                                   │  │
 │  │  Catches semantic matches:                                        │  │
-│  │    "MDCK-MDR1 permeability" matches even without "PAMPA" keyword │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
+│  │    "MDCK-MDR1 permeability" matches even without "PAMPA" keyword  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
-│  ┌─── SPARSE SEARCH (BM25 lexical) ────────────────────────────────┐  │
-│  │  BM25(query_tokens, chunk) for all 37 chunks                     │  │
-│  │  → top 20 by BM25 score                                          │  │
+│  ┌─── SPARSE SEARCH (BM25 lexical) ──────────────────────────────────┐  │
+│  │  BM25(query_tokens, chunk) for all 37 chunks                      │  │
+│  │  → top 20 by BM25 score                                           │  │
 │  │                                                                   │  │
 │  │  Catches exact term matches:                                      │  │
-│  │    "pampa_pe: 8.2" found by exact token "pampa"                  │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
+│  │    "pampa_pe: 8.2" found by exact token "pampa"                   │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
-│  ┌─── RRF MERGE ───────────────────────────────────────────────────┐  │
-│  │  rrf_score(chunk) = 1/(60 + rank_dense) + 1/(60 + rank_sparse)  │  │
+│  ┌─── RRF MERGE ─────────────────────────────────────────────────────┐  │
+│  │  rrf_score(chunk) = 1/(60 + rank_dense) + 1/(60 + rank_sparse)    │  │
 │  │                                                                   │  │
-│  │  Chunks ranked high in BOTH lists get the best combined score.   │  │
-│  │  No score normalization needed — purely rank-based.              │  │
+│  │  Chunks ranked high in BOTH lists get the best combined score.    │  │
+│  │  No score normalization needed — purely rank-based.               │  │
 │  │                                                                   │  │
-│  │  → top 5 returned to agent                                       │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
+│  │  → top 5 returned to agent                                        │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  ▼
@@ -71,17 +71,17 @@ Two tools work together in a **search → retrieve** pattern:
 │                                                                         │
 │  Top 5 results for 'PAMPA assay BBB permeability':                      │
 │                                                                         │
-│  --- [Source: assay_data/bbb_pampa_assay_results.csv § rows_1-10] ---  │
-│  Row 1: compound_id: SNF-001, smiles: CN1C=NC2=..., pampa_pe: 8.2,    │
-│  classification: CNS+, mw: 194.19, logp: 0.16, ...                    │
-│  Row 2: compound_id: SNF-002, ...                                      │
-│  (CSV chunks shown in full — all 10 rows visible)                      │
+│  --- [Source: assay_data/bbb_pampa_assay_results.csv § rows_1-10] ---   │
+│  Row 1: compound_id: SNF-001, smiles: CN1C=NC2=..., pampa_pe: 8.2,      │
+│  classification: CNS+, mw: 194.19, logp: 0.16, ...                      │
+│  Row 2: compound_id: SNF-002, ...                                       │
+│  (CSV chunks shown in full — all 10 rows visible)                       │
 │                                                                         │
 │  --- [Source: internal_reports/bbb_model_benchmark_2024.md              │
 │       § Dataset Characteristics] ---                                    │
-│  Our internal dataset comprises 2,847 compounds tested in the          │
-│  MDCK-MDR1 permeability assay, supplemented with PAMPA-BBB...          │
-│  (markdown truncated at 500 chars — enough for context)                │
+│  Our internal dataset comprises 2,847 compounds tested in the           │
+│  MDCK-MDR1 permeability assay, supplemented with PAMPA-BBB...           │
+│  (markdown truncated at 500 chars — enough for context)                 │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  │  Agent sees CSV data but wants the full 50-row file
@@ -92,7 +92,7 @@ Two tools work together in a **search → retrieve** pattern:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  SOURCE RETRIEVAL                                                       │
 │                                                                         │
-│  ReadKnowledgeSourceTool._run("assay_data/bbb_pampa_assay_results.csv")│
+│  ReadKnowledgeSourceTool._run("assay_data/bbb_pampa_assay_results.csv") │
 │    1. Resolve path: kb_dir / source_file                                │
 │    2. Security: verify path is within kb_dir (no traversal)             │
 │    3. Read full file (up to 5000 chars)                                 │
@@ -100,11 +100,11 @@ Two tools work together in a **search → retrieve** pattern:
 │                                                                         │
 │  [Source: assay_data/bbb_pampa_assay_results.csv]                       │
 │                                                                         │
-│  compound_id,smiles,pampa_pe,classification,mw,logp,tpsa,hbd,hba,notes │
-│  SNF-001,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,8.2,CNS+,194.19,0.16,...       │
-│  SNF-002,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,12.5,CNS+,206.28,3.97,...     │
+│  compound_id,smiles,pampa_pe,classification,mw,logp,tpsa,hbd,hba,notes  │
+│  SNF-001,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,8.2,CNS+,194.19,0.16,...          │
+│  SNF-002,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,12.5,CNS+,206.28,3.97,...        │
 │  ... (all 50 rows)                                                      │
-│  SNF-050,CC(C)NCC(O)C1=CC=C(NS(C)(=O)=O)C=C1,0.8,CNS-,272.34,...     │
+│  SNF-050,CC(C)NCC(O)C1=CC=C(NS(C)(=O)=O)C=C1,0.8,CNS-,272.34,...        │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  ▼
@@ -124,44 +124,44 @@ uv run python -m pharma_agents.ingest_kb -e bbbp
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  _build_index(kb_dir)                                                   │
 │                                                                         │
-│  1. SCAN: glob **/*.md and **/*.csv under knowledge_base/              │
+│  1. SCAN: glob **/*.md and **/*.csv under knowledge_base/               │
 │                                                                         │
 │  2. CHUNK each file:                                                    │
-│     ┌─────────────────────────────────────────────────────────────┐    │
+│     ┌──────────────────────────────────────────────────────────────┐    │
 │     │ Markdown (.md):                                              │    │
-│     │   - Extract doc title from YAML frontmatter or # heading    │    │
-│     │   - Split on ## headings (natural section boundaries)       │    │
-│     │   - If section > 500 words → split on paragraphs            │    │
-│     │   - If still too large → split at word boundaries           │    │
-│     │   - Apply 50-word overlap between adjacent chunks           │    │
-│     ├─────────────────────────────────────────────────────────────┤    │
+│     │   - Extract doc title from YAML frontmatter or # heading     │    │
+│     │   - Split on ## headings (natural section boundaries)        │    │
+│     │   - If section > 500 words → split on paragraphs             │    │
+│     │   - If still too large → split at word boundaries            │    │
+│     │   - Apply 50-word overlap between adjacent chunks            │    │
+│     ├──────────────────────────────────────────────────────────────┤    │
 │     │ CSV (.csv):                                                  │    │
-│     │   - Read with csv.DictReader                                │    │
-│     │   - Group rows in batches of 10                             │    │
-│     │   - Convert each row to natural language:                   │    │
-│     │     "Row 1: compound_id: SNF-001, smiles: ..., mw: 194"    │    │
-│     └─────────────────────────────────────────────────────────────┘    │
+│     │   - Read with csv.DictReader                                 │    │
+│     │   - Group rows in batches of 10                              │    │
+│     │   - Convert each row to natural language:                    │    │
+│     │     "Row 1: compound_id: SNF-001, smiles: ..., mw: 194"      │    │
+│     └──────────────────────────────────────────────────────────────┘    │
 │                                                                         │
-│  3. CONTEXTUAL RETRIEVAL (Anthropic cookbook approach):                  │
-│     Before embedding, prepend document context to each chunk:          │
+│  3. CONTEXTUAL RETRIEVAL (Anthropic cookbook approach):                 │
+│     Before embedding, prepend document context to each chunk:           │
 │                                                                         │
-│     Raw content:  "TPSA < 90, LogP 1-3, HBD ≤ 3..."                   │
-│     Embed text:   "[From: CNS Drug Design Guidelines]                  │
+│     Raw content:  "TPSA < 90, LogP 1-3, HBD ≤ 3..."                     │
+│     Embed text:   "[From: CNS Drug Design Guidelines]                   │
 │                    BBB-Specific Property Ranges:                        │
-│                    TPSA < 90, LogP 1-3, HBD ≤ 3..."                   │
+│                    TPSA < 90, LogP 1-3, HBD ≤ 3..."                     │
 │                                                                         │
-│     → embedding captures BOTH local detail AND global doc context      │
-│     → stored content stays clean (no prefix in search results)         │
+│     → embedding captures BOTH local detail AND global doc context       │
+│     → stored content stays clean (no prefix in search results)          │
 │                                                                         │
-│  4. EMBED: batch fastembed (BAAI/bge-small-en-v1.5, 384 dims)         │
-│     model.embed([embed_text_1, embed_text_2, ...])                     │
+│  4. EMBED: batch fastembed (BAAI/bge-small-en-v1.5, 384 dims)           │
+│     model.embed([embed_text_1, embed_text_2, ...])                      │
 │                                                                         │
 │  5. BM25 VOCABULARY: for each chunk                                     │
-│     - _tokenize(content) → lowercase, strip punctuation, len > 1      │
-│     - token_freqs = Counter(tokens)                                    │
-│     - Global: bm25_doc_count, bm25_avg_dl, bm25_df per token          │
+│     - _tokenize(content) → lowercase, strip punctuation, len > 1        │
+│     - token_freqs = Counter(tokens)                                     │
+│     - Global: bm25_doc_count, bm25_avg_dl, bm25_df per token            │
 │                                                                         │
-│  6. WRITE: index.json (full replacement, not incremental)              │
+│  6. WRITE: index.json (full replacement, not incremental)               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 

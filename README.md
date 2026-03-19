@@ -34,59 +34,59 @@ Give an AI agent crew a molecular ML task. Let them iterate autonomously. They r
 │                        PHARMA-CATALYST PIPELINE                         │
 │                                                                         │
 │  ┌─────────────┐                                                        │
-│  │  ARCHIVIST   │ (runs first or when stuck)                            │
-│  │  arxiv +     │─── literature/index.json (embeddings)                 │
-│  │  PubMed      │                                                       │
+│  │  ARCHIVIST  │ (runs first or when stuck)                             │
+│  │  arxiv +    │─── literature/index.json (embeddings)                  │
+│  │  PubMed     │                                                        │
 │  └──────────────┘                                                       │
 │                                                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │                    ITERATION LOOP (CrewAI)                        │   │
-│  │                                                                   │   │
+│  │                    ITERATION LOOP (CrewAI)                       │   │
+│  │                                                                  │   │
 │  │  ┌─────────────────────┐    ┌──────────────────────────────────┐ │   │
-│  │  │  HYPOTHESIS AGENT   │    │     DATA SOURCES                  │ │   │
-│  │  │  Research Scientist  │◄───│  query_literature (arxiv papers) │ │   │
-│  │  │                     │    │  query_knowledge_base (internal)  │ │   │
-│  │  │  Proposes ONE change│    │  read_kb_source (full file read)  │ │   │
-│  │  │  informed by data   │    │  search_tooluniverse (validated)  │ │   │
+│  │  │  HYPOTHESIS AGENT   │    │  DATA SOURCES                    │ │   │
+│  │  │  Research Scientist │◄───│  query_literature (arxiv papers) │ │   │
+│  │  │                     │    │  query_knowledge_base (internal) │ │   │
+│  │  │  Proposes ONE change│    │  read_kb_source (full file read) │ │   │
+│  │  │  informed by data   │    │  search_tooluniverse (validated) │ │   │
 │  │  └─────────┬───────────┘    │  lookup_compound (PubChem)       │ │   │
-│  │            │                 │  discover_skills / load_skill    │ │   │
-│  │            ▼                 └──────────────────────────────────┘ │   │
-│  │  ┌─────────────────────────────────────────────────────┐         │   │
-│  │  │  REVIEW PANEL (AutoGen GroupChat)                    │         │   │
-│  │  │                                                      │         │   │
-│  │  │  Statistician → Medicinal Chemist → Devil's Advocate │         │   │
-│  │  │  → Memory Analyst → Ethics Reviewer → Moderator      │         │   │
-│  │  │                                                      │         │   │
-│  │  │  Verdict: APPROVED / REVISED / REJECTED              │         │   │
-│  │  └──────────────────────┬──────────────────────────────┘         │   │
-│  │            │ rejected → skip, store feedback                      │   │
-│  │            ▼ approved                                             │   │
+│  │            │                │  discover_skills / load_skill    │ │   │
+│  │            ▼                └──────────────────────────────────┘ │   │
+│  │  ┌──────────────────────────────────────────────────────┐        │   │
+│  │  │  REVIEW PANEL (AutoGen GroupChat)                    │        │   │
+│  │  │                                                      │        │   │
+│  │  │  Statistician → Medicinal Chemist → Devil's Advocate │        │   │
+│  │  │  → Memory Analyst → Ethics Reviewer → Moderator      │        │   │
+│  │  │                                                      │        │   │
+│  │  │  Verdict: APPROVED / REVISED / REJECTED              │        │   │
+│  │  └─────────┬────────────────────────────────────────────┘        │   │
+│  │            │ rejected → skip, store feedback                     │   │
+│  │            ▼ approved                                            │   │
 │  │  ┌─────────────────────┐                                         │   │
 │  │  │  MODEL AGENT        │                                         │   │
 │  │  │  ML Engineer        │  read → write → lint → fix              │   │
 │  │  │  Modifies train.py  │  (only train.py, ruff-validated)        │   │
 │  │  └─────────┬───────────┘                                         │   │
-│  │            ▼                                                      │   │
+│  │            ▼                                                     │   │
 │  │  ┌─────────────────────┐                                         │   │
 │  │  │  EVALUATOR AGENT    │                                         │   │
 │  │  │  QA Scientist       │  run_train_py → extract metric          │   │
 │  │  │  Runs training      │  compare to baseline                    │   │
 │  │  └─────────┬───────────┘                                         │   │
-│  │            │                                                      │   │
-│  │            ▼                                                      │   │
+│  │            │                                                     │   │
+│  │            ▼                                                     │   │
 │  │  ┌─────────────────────┐                                         │   │
 │  │  │ IMPROVED?           │                                         │   │
 │  │  │ yes → git commit    │                                         │   │
 │  │  │ no  → git revert    │                                         │   │
 │  │  └─────────┬───────────┘                                         │   │
-│  │            ▼                                                      │   │
-│  │     UPDATE MEMORY → next iteration                                │   │
-│  └───────────────────────────────────────────────────────────────────┘   │
+│  │            ▼                                                     │   │
+│  │     UPDATE MEMORY → next iteration                               │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
 │  ┌────────────────────────────────────────────────┐                     │
-│  │  MEMORY (experiments/<exp>/memory.json)         │                     │
-│  │  What Worked │ What Failed │ Key Learnings      │                     │
-│  │  Stagnation detection → exploration mode        │                     │
+│  │  MEMORY (experiments/<exp>/memory.json)        │                     │
+│  │  What Worked │ What Failed │ Key Learnings     │                     │
+│  │  Stagnation detection → exploration mode       │                     │
 │  └────────────────────────────────────────────────┘                     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```

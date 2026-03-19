@@ -12,3 +12,4 @@ experiments/*/run_*/
 
 # Worktrees (isolated run environments)
 .worktrees/
+.claude/settings.local.json

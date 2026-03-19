@@ -10,17 +10,17 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FIRST RUN (or exploration)                   │
 │                                                                 │
-│  ┌──────────────┐    search     ┌──────────────┐               │
-│  │   ARCHIVIST  │ ───────────►  │    arxiv     │               │
-│  │     AGENT    │               │     API      │               │
-│  └──────┬───────┘               └──────────────┘               │
+│  ┌──────────────┐    search     ┌──────────────┐                │
+│  │   ARCHIVIST  │ ───────────►  │    arxiv     │                │
+│  │     AGENT    │               │     API      │                │
+│  └──────┬───────┘               └──────────────┘                │
 │         │                                                       │
 │         │ fetch papers                                          │
 │         ▼                                                       │
-│  ┌──────────────┐    fallback   ┌──────────────┐               │
-│  │   alphaxiv   │ ◄──────────── │  arxiv abs   │               │
-│  │  (full text) │   if 404      │ (via md.new) │               │
-│  └──────┬───────┘               └──────────────┘               │
+│  ┌──────────────┐    fallback   ┌──────────────┐                │
+│  │   alphaxiv   │ ◄──────────── │  arxiv abs   │                │
+│  │  (full text) │   if 404      │ (via md.new) │                │
+│  └──────┬───────┘               └──────────────┘                │
 │         │                                                       │
 │         │ store + embed (fastembed BGE-small 384d)              │
 │         ▼                                                       │
@@ -38,10 +38,10 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SUBSEQUENT RUNS                              │
 │                                                                 │
-│  ┌──────────────┐  semantic search  ┌──────────────┐           │
-│  │  HYPOTHESIS  │ ◄───────────────► │  LITERATURE  │           │
-│  │    AGENT     │   (cosine sim)    │      DB      │           │
-│  └──────────────┘                   └──────────────┘           │
+│  ┌──────────────┐  semantic search  ┌──────────────┐            │
+│  │  HYPOTHESIS  │ ◄───────────────► │  LITERATURE  │            │
+│  │    AGENT     │   (cosine sim)    │      DB      │            │
+│  └──────────────┘                   └──────────────┘            │
 │                                                                 │
 │  Query: "gradient boosting molecular fingerprints"              │
 │  Returns: Top 5 papers with similarity scores                   │
@@ -70,21 +70,21 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 ## The Scientist
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    HYPOTHESIS AGENT                             │
-│                                                                 │
+┌────────────────────────────────────────────────────────────────┐
+│                    HYPOTHESIS AGENT                            │
+│                                                                │
 │     ┌─────────────────────────────────────────────────┐        │
 │     │                INPUTS                           │        │
-│     │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────┐ │        │
-│     │  │ MEMORY  │ │LITERATUR│ │ SKILLS  │ │PUBCHEM│ │        │
-│     │  │ (what   │ │ (recent │ │(discover│ │(real  │ │        │
-│     │  │ worked/ │ │ papers) │ │ + load) │ │ MW,   │ │        │
-│     │  │ failed) │ │         │ │         │ │ logP) │ │        │
-│     │  └────┬────┘ └────┬────┘ └────┬────┘ └───┬───┘ │        │
-│     │        │              │              │         │        │
-│     │        └──────────────┼──────────────┘         │        │
-│     │                       │                        │        │
-│     └───────────────────────┼────────────────────────┘        │
+│     │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────┐  │        │
+│     │  │ MEMORY  │ │LITERATUR│ │ SKILLS  │ │PUBCHEM│  │        │
+│     │  │ (what   │ │ (recent │ │(discover│ │(real  │  │        │
+│     │  │ worked/ │ │ papers) │ │ + load) │ │ MW,   │  │        │
+│     │  │ failed) │ │         │ │         │ │ logP) │  │        │
+│     │  └────┬────┘ └────┬────┘ └────┬────┘ └───┬───┘  │        │
+│     │        │              │              │          │        │
+│     │        └──────────────┼──────────────┘          │        │
+│     │                       │                         │        │
+│     └───────────────────────┼─────────────────────────┘        │
 │                             ▼                                  │
 │                   ┌───────────────────┐                        │
 │                   │    REASONING      │                        │
@@ -105,7 +105,7 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 │                   │  │ + CHANGE    │  │                        │
 │                   │  └─────────────┘  │                        │
 │                   └───────────────────┘                        │
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────┘
 ```
 
 **Role:** Research Scientist specializing in molecular ML
@@ -134,43 +134,43 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 │         PROPOSAL                                                │
 │            │                                                    │
 │            ▼                                                    │
-│  ┌───────────────────────────────────────────┐                 │
-│  │  1. READ current train.py                 │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │  1. READ current train.py                 │                  │
+│  └───────────────────────────────────────────┘                  │
 │            │                                                    │
 │            ▼                                                    │
-│  ┌───────────────────────────────────────────┐                 │
-│  │  2. INSTALL packages if needed            │                 │
-│  │     (lightgbm, xgboost, catboost...)      │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │  2. INSTALL packages if needed            │                  │
+│  │     (lightgbm, xgboost, catboost...)      │                  │
+│  └───────────────────────────────────────────┘                  │
 │            │                                                    │
 │            ▼                                                    │
-│  ┌───────────────────────────────────────────┐                 │
-│  │  3. WRITE modified train.py               │                 │
-│  │  ┌─────────────────────────────────────┐  │                 │
-│  │  │  def train():                       │  │                 │
-│  │  │    # Morgan FP (2048 bits, r=3)     │  │                 │
-│  │  │    # + MACCS keys                   │  │                 │
-│  │  │    # + Physicochemical descriptors  │  │                 │
-│  │  │    model = XGBClassifier(...)       │  │                 │
-│  │  │    return roc_auc                   │  │                 │
-│  │  └─────────────────────────────────────┘  │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │  3. WRITE modified train.py               │                  │
+│  │  ┌─────────────────────────────────────┐  │                  │
+│  │  │  def train():                       │  │                  │
+│  │  │    # Morgan FP (2048 bits, r=3)     │  │                  │
+│  │  │    # + MACCS keys                   │  │                  │
+│  │  │    # + Physicochemical descriptors  │  │                  │
+│  │  │    model = XGBClassifier(...)       │  │                  │
+│  │  │    return roc_auc                   │  │                  │
+│  │  └─────────────────────────────────────┘  │                  │
+│  └───────────────────────────────────────────┘                  │
 │            │                                                    │
 │            ▼                                                    │
-│  ┌───────────────────────────────────────────┐                 │
-│  │  4. CODE CHECK (ruff linter)              │                 │
-│  │     ┌─────────┐                           │                 │
-│  │     │ ruff ✓  │ ◄──── fix errors ─────┐   │                 │
-│  │     │ pass    │                       │   │                 │
-│  │     └─────────┘                       │   │                 │
-│  │         │                             │   │                 │
-│  │         │ errors?                     │   │                 │
-│  │         └─────────────────────────────┘   │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │  4. CODE CHECK (ruff linter)              │                  │
+│  │     ┌─────────┐                           │                  │
+│  │     │   ruff  │ ◄──── fix errors ─────┐   │                  │
+│  │     │   pass  │                       │   │                  │
+│  │     └─────────┘                       │   │                  │
+│  │         │                             │   │                  │
+│  │         │ errors?                     │   │                  │
+│  │         └─────────────────────────────┘   │                  │
+│  └───────────────────────────────────────────┘                  │
 │            │                                                    │
 │            ▼                                                    │
-│        READY FOR EVALUATION                                     │
+│     READY FOR EVALUATION                                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -195,37 +195,37 @@ Meet the pharma-catalyst crew - autonomous agents working together to improve mo
 ┌─────────────────────────────────────────────────────────────────┐
 │                    EVALUATOR AGENT                              │
 │                                                                 │
-│  ┌───────────────────────────────────────────┐                 │
-│  │         RUN TRAINING                      │                 │
-│  │  $ python train.py                        │                 │
-│  │  > ROC_AUC: 0.9418                        │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │         RUN TRAINING                      │                  │
+│  │  $ python train.py                        │                  │
+│  │  > ROC_AUC: 0.9418                        │                  │
+│  └───────────────────────────────────────────┘                  │
 │                       │                                         │
 │                       ▼                                         │
-│  ┌───────────────────────────────────────────┐                 │
-│  │         COMPARISON                        │                 │
-│  │  ┌─────────────────────────────────────┐  │                 │
-│  │  │  Score:     0.9418                  │  │                 │
-│  │  │  Baseline:  0.8951                  │  │                 │
-│  │  │  ────────────────────────────────   │  │                 │
-│  │  │  Change:    +5.2%                   │  │                 │
-│  │  │  Direction: higher_is_better        │  │                 │
-│  │  └─────────────────────────────────────┘  │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │         COMPARISON                        │                  │
+│  │  ┌─────────────────────────────────────┐  │                  │
+│  │  │  Score:     0.9418                  │  │                  │
+│  │  │  Baseline:  0.8951                  │  │                  │
+│  │  │  ────────────────────────────────   │  │                  │
+│  │  │  Change:    +5.2%                   │  │                  │
+│  │  │  Direction: higher_is_better        │  │                  │
+│  │  └─────────────────────────────────────┘  │                  │
+│  └───────────────────────────────────────────┘                  │
 │                       │                                         │
 │                       ▼                                         │
-│  ┌───────────────────────────────────────────┐                 │
-│  │         DECISION                          │                 │
-│  │                                           │                 │
-│  │    improved?                              │                 │
-│  │       │                                   │                 │
-│  │       ├── YES ──► ✅ KEEP                 │                 │
-│  │       │           (commit changes)        │                 │
-│  │       │                                   │                 │
-│  │       └── NO ───► ❌ REVERT               │                 │
-│  │                   (git reset)             │                 │
-│  │                                           │                 │
-│  └───────────────────────────────────────────┘                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │         DECISION                          │                  │
+│  │                                           │                  │
+│  │    improved?                              │                  │
+│  │       │                                   │                  │
+│  │       ├── YES ──► KEEP                    │                  │
+│  │       │           (commit changes)        │                  │
+│  │       │                                   │                  │
+│  │       └── NO ───► REVERT                  │                  │
+│  │                   (git reset)             │                  │
+│  │                                           │                  │
+│  └───────────────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -250,53 +250,53 @@ Between hypothesis and implementation, an adversarial expert panel debates the p
 **Why a separate framework?** CrewAI excels at sequential task pipelines. But multi-perspective debate — agents arguing over the same topic, building on each other's points — is a fundamentally different interaction pattern. AutoGen's GroupChat is purpose-built for this.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     AUTOGEN REVIEW PANEL (GroupChat)                        │
-│                                                                             │
-│  Hypothesis ──────────────────────────────────────────────────────►         │
-│                                                                             │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                     AUTOGEN REVIEW PANEL (GroupChat)                       │
+│                                                                            │
+│  Hypothesis ──────────────────────────────────────────────────────►        │
+│                                                                            │
 │  Round 1 (each expert speaks once):                                        │
-│                                                                             │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                  │
-│  │ STATISTICIAN  │  │   MEDICINAL   │  │    DEVIL'S    │                  │
-│  │               │  │    CHEMIST    │  │   ADVOCATE    │                  │
-│  ├───────────────┤  ├───────────────┤  ├───────────────┤                  │
-│  │ Sample size   │  │ SAR validity  │  │ ML pitfalls   │                  │
-│  │ Overfitting   │  │ Descriptors   │  │ Feature bloat │                  │
-│  │ Stat. power   │  │ Chemical sense│  │ Time blowup   │                  │
-│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                  │
-│          │                  │                   │                           │
-│  ┌───────┴──────┐   ┌──────┴───────┐                                      │
-│  │    TEAM      │   │    PHARMA    │                                      │
-│  │   MEMORY     │   │    ETHICS    │                                      │
-│  │   ANALYST    │   │   REVIEWER   │                                      │
-│  ├──────────────┤   ├──────────────┤                                      │
-│  │ Duplicates?  │   │ Bias risk    │                                      │
-│  │ Local optima │   │ Explainability│                                     │
-│  │ Past results │   │ Patient safety│                                     │
-│  └──────────────┘   └──────┬───────┘                                      │
-│                             │                                              │
+│                                                                            │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                   │
+│  │ STATISTICIAN  │  │   MEDICINAL   │  │    DEVIL'S    │                   │
+│  │               │  │    CHEMIST    │  │   ADVOCATE    │                   │
+│  ├───────────────┤  ├───────────────┤  ├───────────────┤                   │
+│  │ Sample size   │  │ SAR validity  │  │ ML pitfalls   │                   │
+│  │ Overfitting   │  │ Descriptors   │  │ Feature bloat │                   │
+│  │ Stat. power   │  │ Chemical sense│  │ Time blowup   │                   │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                   │
+│          │                  │                  │                           │
+│  ┌───────┴──────┐   ┌───────┴───────┐          │                           │
+│  │    TEAM      │   │     PHARMA    │          │                           │
+│  │   MEMORY     │   │     ETHICS    │          │                           │
+│  │   ANALYST    │   │    REVIEWER   │          │                           │
+│  ├──────────────┤   ├───────────────┤          │                           │
+│  │ Duplicates?  │   │ Bias risk     │          │                           │
+│  │ Local optima │   │ Explainability│          │                           │
+│  │ Past results │   │ Patient safety│          │                           │
+│  └──────────────┘   └───────┬───────┘          │                           │
+│          │                  │                  │                           │
 │  Round 2 (experts respond to each other's points)...                       │
-│                             │                                              │
-│                             ▼                                              │
+│          │                  │                  │                           │
+│          ▼                  ▼                  ▼                           │
 │  ┌───────────────────────────────────────────────────────────────────────┐ │
 │  │                        MODERATOR                                      │ │
 │  │  Summarizes debate, issues structured verdict:                        │ │
 │  │                                                                       │ │
 │  │  ┌─────────────────────────────────────────────────────────────────┐  │ │
-│  │  │  { "decision": "approved" | "revised" | "rejected",           │  │ │
-│  │  │    "feedback": "panel summary",                                │  │ │
-│  │  │    "confidence": 0.85,                                         │  │ │
-│  │  │    "concerns": ["...", "..."] }                                │  │ │
+│  │  │  { "decision": "approved" | "revised" | "rejected",             │  │ │
+│  │  │    "feedback": "panel summary",                                 │  │ │
+│  │  │    "confidence": 0.85,                                          │  │ │
+│  │  │    "concerns": ["...", "..."] }                                 │  │ │
 │  │  └─────────────────────────────────────────────────────────────────┘  │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 │                             │                                              │
 │              ┌──────────────┼──────────────┐                               │
-│              ▼              ▼              ▼                                │
+│              ▼              ▼              ▼                               │
 │          APPROVED        REVISED       REJECTED                            │
-│          (proceed)    (modified proposal)  (skip, feedback                  │
-│                        (proceed)       stored in memory)                    │
-└─────────────────────────────────────────────────────────────────────────────┘
+│          (proceed)    (modified proposal)  (skip, feedback                 │
+│                        (proceed)       stored in memory)                   │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Panel Members
@@ -328,104 +328,66 @@ Between hypothesis and implementation, an adversarial expert panel debates the p
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ INITIALIZATION                                                              │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐                              │
-│  │  Create  │ ►  │  Load    │ ►  │  Check   │                              │
-│  │ worktree │    │  memory  │    │literature│                              │
-│  └──────────┘    └──────────┘    └──────────┘                              │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐                               │
+│  │  Create  │ ►  │  Load    │ ►  │  Check   │                               │
+│  │ worktree │    │  memory  │    │literature│                               │
+│  └──────────┘    └──────────┘    └──────────┘                               │
 │                                        │                                    │
 │                         ┌──────────────┴──────────────┐                     │
 │                         │  Literature exists?         │                     │
-│                         └──────────────┬──────────────┘                     │
+│                         └─────────┬──────────┬────────┘                     │
 │                                NO │          │ YES                          │
 │                                   ▼          │                              │
 │                         ┌──────────────┐     │                              │
 │                         │  ARCHIVIST   │     │                              │
 │                         │  (gather     │     │  (or run standalone:         │
 │                         │   papers)    │     │   python -m pharma_agents    │
-│                         └──────┬───────┘     │   .research -e <exp>)       │
+│                         └──────┬───────┘     │   .research -e <exp>)        │
 │                                │             │                              │
 │                                └──────┬──────┘                              │
 │                                       ▼                                     │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ITERATION LOOP (for each iteration)                                        │
+│ ITERATION LOOP (for each iteration)                                         │
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        SEQUENTIAL PROCESS                           │   │
-│  │                                                                     │   │
-│  │  ┌───────────────┐   ┌───────────────┐   ┌───────────────┐        │   │
-│  │  │  HYPOTHESIS   │   │     MODEL     │   │   EVALUATOR   │        │   │
-│  │  │    AGENT      │ → │     AGENT     │ → │     AGENT     │        │   │
-│  │  ├───────────────┤   ├───────────────┤   ├───────────────┤        │   │
-│  │  │ • literature  │   │ • read code   │   │ • run train   │        │   │
-│  │  │ • memory      │   │ • install pkg │   │ • compare     │        │   │
-│  │  │ • skills      │   │ • write code  │   │ • recommend   │        │   │
-│  │  │               │   │ • lint check  │   │               │        │   │
-│  │  └───────────────┘   └───────────────┘   └───────────────┘        │   │
-│  │         │                   │                    │                 │   │
-│  │         ▼                   ▼                    ▼                 │   │
-│  │     PROPOSAL           train.py             KEEP/REVERT           │   │
-│  │                        modified                                    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                        SEQUENTIAL PROCESS                            │   │
+│  │                                                                      │   │
+│  │  ┌───────────────┐   ┌───────────────┐   ┌───────────────┐           │   │
+│  │  │  HYPOTHESIS   │   │     MODEL     │   │   EVALUATOR   │           │   │
+│  │  │    AGENT      │ → │     AGENT     │ → │     AGENT     │           │   │
+│  │  ├───────────────┤   ├───────────────┤   ├───────────────┤           │   │
+│  │  │ • literature  │   │ • read code   │   │ • run train   │           │   │
+│  │  │ • memory      │   │ • install pkg │   │ • compare     │           │   │
+│  │  │ • skills      │   │ • write code  │   │ • recommend   │           │   │
+│  │  │               │   │ • lint check  │   │               │           │   │
+│  │  └───────────────┘   └───────────────┘   └───────────────┘           │   │
+│  │         │                   │                    │                   │   │
+│  │         ▼                   ▼                    ▼                   │   │
+│  │     PROPOSAL           train.py             KEEP/REVERT              │   │
+│  │                        modified                                      │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                        │
 │                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        POST-ITERATION                               │   │
-│  │                                                                     │   │
-│  │   KEEP? ──► git commit ──► update memory ──► update baseline       │   │
-│  │   REVERT? ──► git reset ──► log failure ──► continue               │   │
-│  │                                                                     │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                        POST-ITERATION                                │   │
+│  │                                                                      │   │
+│  │   KEEP? ──► git commit ──► update memory ──► update baseline         │   │
+│  │   REVERT? ──► git reset ──► log failure ──► continue                 │   │
+│  │                                                                      │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ COMPLETION                                                                  │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐                              │
-│  │  Merge   │ ►  │ Generate │ ►  │  Cleanup │                              │
-│  │ worktree │    │  report  │    │ worktree │                              │
-│  └──────────┘    └──────────┘    └──────────┘                              │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐                               │
+│  │  Merge   │ ►  │ Generate │ ►  │  Cleanup │                               │
+│  │ worktree │    │  report  │    │ worktree │                               │
+│  └──────────┘    └──────────┘    └──────────┘                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Memory System
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    AGENT MEMORY                                 │
-│                                                                 │
-│  experiments/<exp>/memory.json                                  │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  {                                                        │ │
-│  │    "runs": {                                              │ │
-│  │      "1": {                                               │ │
-│  │        "best_score": 0.9300,                              │ │
-│  │        "experiments": [                                   │ │
-│  │          {                                                │ │
-│  │            "hypothesis": "Add physicochemical...",        │ │
-│  │            "result": "success",                           │ │
-│  │            "improvement_pct": 3.9                         │ │
-│  │          }                                                │ │
-│  │        ],                                                 │ │
-│  │        "conclusion": "PROGRESS_CONTINUING"                │ │
-│  │      },                                                   │ │
-│  │      "2": { ... }                                         │ │
-│  │    },                                                     │ │
-│  │    "global_best_score": 0.9418                            │ │
-│  │  }                                                        │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│  Used by Hypothesis Agent:                                      │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  "What Worked" ──► Build on successful approaches         │ │
-│  │  "What Failed" ──► Avoid repeating mistakes               │ │
-│  │  "Best Score"  ──► Track progress                         │ │
-│  └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-*Built with CrewAI + AutoGen. Powered by Gemini. Optimized by curiosity.*
+*Built with CrewAI + AutoGen. Optimized by curiosity.*
