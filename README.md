@@ -15,6 +15,18 @@ Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) 
 
 Give an AI agent crew a molecular ML task. Let them iterate autonomously. They research literature, query internal data, propose changes, face an expert review panel, implement approved changes, evaluate results, keep improvements, discard failures. You wake up to a better model.
 
+## Features Demonstrated
+
+- **Multi-agent orchestration** — 4 specialized agents (CrewAI) + 6-expert review panel (AutoGen) working in sequence
+- **Hybrid RAG** — BM25 sparse + dense embeddings + Reciprocal Rank Fusion over internal pharma documents, with contextual retrieval (Anthropic cookbook)
+- **Persistent cross-run memory** — agents learn from past successes and failures, with stagnation detection and exploration mode
+- **Adversarial expert review** — Statistician, Medicinal Chemist, Devil's Advocate, Memory Analyst, and Ethics Reviewer debate each proposal before implementation
+- **Autonomous code modification** — agents write, lint, and test Python ML code in isolated git worktrees
+- **7-layer safety guardrails** — dangerous pattern blocking, package whitelist (YAML-configurable), execution timeouts, file isolation, auto-revert on failure
+- **Hallucination-proof evaluation** — Python runs training and compares metrics; LLM text is for observability, not decisions
+- **Scientific data integration** — PubMed, PubChem, arxiv, ToolUniverse (1900+ validated tools) via direct REST APIs
+- **Pharma domain awareness** — ADMET properties, molecular fingerprints (Morgan, MACCS), RDKit descriptors, cheminformatics workflows
+
 ## Architecture
 
 ```
