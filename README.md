@@ -2,78 +2,96 @@
 
 **Self-improving AI agents for molecular property prediction.**
 
-Built with CrewAI, featuring persistent cross-run memory, hybrid RAG knowledge base (BM25 + dense + RRF), automatic stuck detection, and exploration mode to escape local optima. Demonstrated on ESOL solubility prediction: **1.32 → 0.65 RMSE (50.4% improvement)** in 6 autonomous iterations.
+Built with CrewAI + AutoGen, featuring adversarial expert review, hybrid RAG knowledge base (BM25 + dense + RRF), persistent cross-run memory, and 7-layer safety guardrails. Demonstrated on BBB penetration, clinical toxicity, and solubility prediction.
 
 Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) — applied to drug discovery ML.
 
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![CrewAI](https://img.shields.io/badge/CrewAI-multi--agent-purple)
+![AutoGen](https://img.shields.io/badge/AutoGen-review--panel-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## The Idea
 
-Give an AI agent crew a molecular ML task. Let them iterate autonomously. They propose changes, implement them, evaluate results, keep improvements, discard failures. You wake up to a better model.
+Give an AI agent crew a molecular ML task. Let them iterate autonomously. They research literature, query internal data, propose changes, face an expert review panel, implement approved changes, evaluate results, keep improvements, discard failures. You wake up to a better model.
 
 ## Architecture
 
 ```
-                    +------------------+
-                    |    Human (You)   |
-                    |  Defines strategy|
-                    +--------+---------+
-                             |
-                             v
-                    +------------------+
-                    |      Crew        |
-                    |    (CrewAI)      |
-                    +--------+---------+
-                             |
-               +-------------+-------------+
-               |                           |
-               v                           v
-        +-------------+             +-------------+
-        | Hypothesis  |             |   Model     |
-        |   Agent     | ─────────►  |   Agent     |
-        +-------------+             +-------------+
-        Research Scientist           ML Engineer
-               │                           │
-               │                           v
-               │                    +-------------+
-               │                    | code_check  |
-               │                    | (ruff+pyright)
-               │                    +-------------+
-               │                           │
-               v                           v
-        +------------------------------------------+
-        |           Python Evaluation              |
-        |  (run_training → compare → commit/revert)|
-        +------------------------------------------+
-                             │
-                             v
-                    +------------------+
-                    |  Agent Memory    |
-                    | (experiments/    |
-                    |  memory.json)    |
-                    +------------------+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        PHARMA-CATALYST PIPELINE                         │
+│                                                                         │
+│  ┌─────────────┐                                                        │
+│  │  ARCHIVIST   │ (runs first or when stuck)                            │
+│  │  arxiv +     │─── literature/index.json (embeddings)                 │
+│  │  PubMed      │                                                       │
+│  └──────────────┘                                                       │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                    ITERATION LOOP (CrewAI)                        │   │
+│  │                                                                   │   │
+│  │  ┌─────────────────────┐    ┌──────────────────────────────────┐ │   │
+│  │  │  HYPOTHESIS AGENT   │    │     DATA SOURCES                  │ │   │
+│  │  │  Research Scientist  │◄───│  query_literature (arxiv papers) │ │   │
+│  │  │                     │    │  query_knowledge_base (internal)  │ │   │
+│  │  │  Proposes ONE change│    │  read_kb_source (full file read)  │ │   │
+│  │  │  informed by data   │    │  search_tooluniverse (validated)  │ │   │
+│  │  └─────────┬───────────┘    │  lookup_compound (PubChem)       │ │   │
+│  │            │                 │  discover_skills / load_skill    │ │   │
+│  │            ▼                 └──────────────────────────────────┘ │   │
+│  │  ┌─────────────────────────────────────────────────────┐         │   │
+│  │  │  REVIEW PANEL (AutoGen GroupChat)                    │         │   │
+│  │  │                                                      │         │   │
+│  │  │  Statistician → Medicinal Chemist → Devil's Advocate │         │   │
+│  │  │  → Memory Analyst → Ethics Reviewer → Moderator      │         │   │
+│  │  │                                                      │         │   │
+│  │  │  Verdict: APPROVED / REVISED / REJECTED              │         │   │
+│  │  └──────────────────────┬──────────────────────────────┘         │   │
+│  │            │ rejected → skip, store feedback                      │   │
+│  │            ▼ approved                                             │   │
+│  │  ┌─────────────────────┐                                         │   │
+│  │  │  MODEL AGENT        │                                         │   │
+│  │  │  ML Engineer        │  read → write → lint → fix              │   │
+│  │  │  Modifies train.py  │  (only train.py, ruff-validated)        │   │
+│  │  └─────────┬───────────┘                                         │   │
+│  │            ▼                                                      │   │
+│  │  ┌─────────────────────┐                                         │   │
+│  │  │  EVALUATOR AGENT    │                                         │   │
+│  │  │  QA Scientist       │  run_train_py → extract metric          │   │
+│  │  │  Runs training      │  compare to baseline                    │   │
+│  │  └─────────┬───────────┘                                         │   │
+│  │            │                                                      │   │
+│  │            ▼                                                      │   │
+│  │  ┌─────────────────────┐                                         │   │
+│  │  │ IMPROVED?           │                                         │   │
+│  │  │ yes → git commit    │                                         │   │
+│  │  │ no  → git revert    │                                         │   │
+│  │  └─────────┬───────────┘                                         │   │
+│  │            ▼                                                      │   │
+│  │     UPDATE MEMORY → next iteration                                │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌────────────────────────────────────────────────┐                     │
+│  │  MEMORY (experiments/<exp>/memory.json)         │                     │
+│  │  What Worked │ What Failed │ Key Learnings      │                     │
+│  │  Stagnation detection → exploration mode        │                     │
+│  └────────────────────────────────────────────────┘                     │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Sequential process:**
-1. Hypothesis Agent proposes an improvement (informed by memory)
-2. Model Agent implements it in `train.py` (validates with ruff+pyright)
-3. Python runs training, compares RMSE (no LLM hallucination possible)
-4. If improved → commit + save to memory. If worse → revert + save failure to memory.
-5. Next iteration sees what worked and what failed.
+**Dual-framework design:**
+- **CrewAI** — sequential ML pipeline (hypothesis → implement → evaluate)
+- **AutoGen** — adversarial GroupChat review panel (6 experts debate before implementation)
 
-## Target Task
+## Experiments
 
-**ESOL Solubility Prediction** - a classic ADMET benchmark.
+| Experiment | Property | Metric | Baseline | Best Result |
+|-----------|----------|--------|----------|-------------|
+| **bbbp** | Blood-brain barrier penetration | ROC-AUC (higher=better) | 0.8951 | 0.9490 (+6.0%) |
+| **clintox** | Clinical trial toxicity | ROC-AUC (higher=better) | 0.6989 | 0.9477 (+35.6%) |
+| **solubility** | Aqueous solubility (logS) | RMSE (lower=better) | 1.3175 | 0.6532 (-50.4%) |
 
-- ~1,128 molecules
-- Predict aqueous solubility (logS)
-- Metric: RMSE (lower = better)
-- Baseline: ~1.32 RMSE with RandomForest + Morgan fingerprints
-
-CPU-friendly. No GPU required. Trains in <1 second.
+CPU-friendly. No GPU required. Each iteration trains in seconds.
 
 ## Quick Start
 
@@ -81,18 +99,18 @@ CPU-friendly. No GPU required. Trains in <1 second.
 # Install dependencies
 uv sync
 
-# Configure API keys (see Configuration section below)
+# Configure API keys
 cp .env.example .env
-# Edit .env with your GOOGLE_API_KEY
+# Edit .env with your LLM_MODEL and API key
 
-# Download datasets (one-time)
-uv run python -m pharma_agents.data.fetch
+# Build literature database (one-time)
+uv run python -m pharma_agents.research -e bbbp
 
-# Run baseline training (verify setup)
-uv run python -m pharma_agents.tools.train
+# Build knowledge base index (one-time)
+uv run python -m pharma_agents.ingest_kb -e bbbp
 
 # Run the agent crew (5 iterations by default)
-uv run python -m pharma_agents.main --experiment bbbp
+uv run python -m pharma_agents.main -e bbbp
 ```
 
 ## Configuration
@@ -100,337 +118,168 @@ uv run python -m pharma_agents.main --experiment bbbp
 Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Required: Google API Key for Gemini
+# Required: LLM provider + model
+LLM_MODEL=gemini/gemini-3-flash-preview
 GOOGLE_API_KEY=your-key-here
 
-# Required: LLM Model
-LLM_MODEL=gemini/gemini-3-flash-preview
+# Alternative providers (pick one)
+# LLM_MODEL=groq/llama-3.1-8b-instant  + GROQ_API_KEY=...
+# LLM_MODEL=openrouter/...              + OPENROUTER_API_KEY=...
 ```
-
-**Environment variables (optional):**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PHARMA_EXPERIMENT` | `bbbp` | Which experiment to run (`bbbp`, `solubility`) |
-| `MAX_ITERATIONS` | `5` | Number of improvement iterations per run |
-| `PHARMA_EXPERIMENTS_DIR` | (auto) | Override experiments path (for worktrees) |
+| `PHARMA_EXPERIMENT` | `bbbp` | Which experiment (`bbbp`, `solubility`, `clintox`) |
+| `MAX_ITERATIONS` | `5` | Improvement iterations per run |
+| `ENABLE_REVIEW_PANEL` | `true` | Adversarial expert review (disable with `--no-review`) |
+| `NCBI_API_KEY` | (optional) | PubMed rate boost (3 → 10 req/s) |
+
+## Knowledge Base RAG
+
+Each experiment has an internal knowledge base with domain-specific documents (reports, assay data, SOPs, safety reviews). The hypothesis agent queries it using **hybrid retrieval**:
+
+```
+query_knowledge_base("BBB physicochemical ranges")
+   │
+   ├── Dense search (cosine similarity on fastembed vectors)
+   ├── Sparse search (BM25 lexical matching)
+   └── Reciprocal Rank Fusion (k=60) → merged ranking
+       │
+       ▼
+   Top 5 results with source attribution
+       │
+       ▼  (agent wants full CSV data)
+read_kb_source("assay_data/bbb_pampa_assay_results.csv")
+       │
+       ▼
+   Complete file content (all 50 rows)
+```
+
+**Contextual retrieval:** Each chunk is embedded with its document title prepended, so the vector captures both local detail and global context.
+
+See [docs/RAG.md](docs/RAG.md) for the full technical reference.
+
+```bash
+# Rebuild index after adding new documents
+uv run python -m pharma_agents.ingest_kb -e bbbp
+```
 
 ## Git Workflow
 
-Each run uses an **isolated worktree**, keeping `main` completely untouched.
-
-```
-pharma-catalyst/
-  │
-  ├── main branch (baseline, never touched during runs)
-  │
-  └── .worktrees/
-        ├── run_001/ ──► isolated copy, agents iterate here
-        │     └── branch: run/001
-        │
-        ├── run_002/ ──► another isolated copy
-        │     └── branch: run/002
-        │
-        └── ...
-```
-
-**Why worktrees?**
-- No stash/conflict issues when switching runs
-- Main stays clean - no accidental commits
-- Can run multiple experiments in parallel
-- Clean discard: just remove the worktree
-
-### Commands
+Each run operates in an **isolated git worktree** — `main` is never touched.
 
 ```bash
-# Build/refresh literature database (run before first experiment)
+# Build/refresh literature database
 uv run python -m pharma_agents.research -e bbbp
 
 # Start a new run (creates worktree + branch)
 uv run python -m pharma_agents.main -e bbbp
 
-# Promote a successful run to main (makes it the new baseline)
-uv run python -m pharma_agents.promote 1
+# Promote a successful run to main
+uv run python -m pharma_agents.promote 1 -e bbbp
 
-# Discard a cancelled/stuck run (removes worktree, memory entry, branch)
-uv run python -m pharma_agents.discard 2
-uv run python -m pharma_agents.discard 2 --keep-logs  # keep log files
+# Discard a cancelled/stuck run
+uv run python -m pharma_agents.discard 2 -e bbbp
 
-# Reset train.py to baseline manually
-uv run python -m pharma_agents.tools.reset
-
-# Compare runs
-git diff run/001..run/002 -- experiments/train.py
+# Generate HTML report with charts
+uv run python -m pharma_agents.report -e bbbp --open
 ```
-
-### Literature Research
-
-The `research` command runs the Archivist agent standalone to build a literature database **before** any optimization run. This lets a human data scientist review what papers the agents will draw from.
-
-```bash
-# First time: builds the database from scratch
-uv run python -m pharma_agents.research -e clintox
-
-# Subsequent calls: only fetches NEW papers (skips duplicates)
-uv run python -m pharma_agents.research -e clintox
-```
-
-**What it does:**
-1. Searches arxiv for papers related to the experiment's target property
-2. Fetches paper content via alphaxiv (structured markdown)
-3. Stores summaries with embeddings for semantic search
-4. Reports how many papers were added
-
-**No worktree, no training, no model changes.** Safe to run anytime. Results are stored in `experiments/<name>/literature/` and persist across runs.
-
-Browse the results:
-- `experiments/<name>/literature/papers/` — Markdown summaries of each paper
-- `experiments/<name>/literature/index.json` — Search index with embeddings
-
-### What happens during a run
-
-1. **Worktree creation**: `.worktrees/run_XXX/` created from `main`
-2. **Reset**: `train.py` reset to `baseline_train.py` (in worktree)
-3. **Baseline commit**: Initial state committed to `run/XXX` branch
-4. **Iterations**: Agents propose/implement/evaluate (all in worktree)
-   - Improvement → commit to branch
-   - No improvement → revert changes
-5. **Summary**: Final RMSE and git log displayed
-6. **Logs**: Saved to `experiments/run_XXX/`
-
-### Promoting a run
-
-When a run produces good results, promote it to main:
-
-```bash
-uv run python -m pharma_agents.promote 1
-```
-
-This will:
-1. Checkout `main`
-2. Merge `run/001` into `main`
-3. Copy `train.py` → `baseline_train.py` (new baseline)
-4. Commit the updated baseline
-
-Future runs will start from this new baseline.
 
 ## Project Structure
 
 ```
 pharma-catalyst/
-├── src/pharma_agents/           # Library code (generic, reusable)
-│   ├── crew.py                  # CrewAI crew definition
-│   ├── memory.py                # Persistent agent memory
-│   ├── agents.yaml              # Agent configs (roles, goals, backstories)
-│   ├── tasks.yaml               # Task definitions
-│   ├── main.py                  # Entry point - runs iterations
-│   ├── promote.py               # Promote run branch to main
-│   ├── discard.py               # Discard cancelled/stuck runs
-│   ├── research.py              # Standalone literature research
-│   ├── tools/
-│   │   ├── training.py          # Read/Write/Run train.py, CodeCheck, InstallPackage
-│   │   ├── evaluate.py          # Fixed evaluation harness
-│   │   ├── arxiv.py             # Arxiv search + paper fetching
-│   │   ├── knowledge_base.py     # Knowledge base RAG (hybrid BM25+dense+RRF)
-│   │   ├── literature.py        # Literature storage + semantic query
-│   │   ├── skills.py            # Scientific skill loader
-│   │   └── reset.py             # Reset train.py to baseline
-│   └── data/
-│       ├── fetch.py             # Download dataset
-│       └── esol.csv             # ESOL dataset (1,128 molecules)
-├── experiments/                 # Shared experiment data (stays in main)
-│   └── <experiment>/            # Per-experiment folder (bbbp, clintox, etc.)
-│       ├── baseline.json        # Baseline config (metric, score, direction)
-│       ├── baseline_train.py    # BASELINE code (never modified by agents)
-│       ├── memory.json          # Persistent agent memory (shared)
-│       ├── knowledge_base/       # Internal docs for RAG (reports, assays, SOPs)
-│       ├── literature/          # Literature DB (built by research command)
-│       │   ├── index.json       # Search index with embeddings
-│       │   └── papers/          # Markdown summaries
-│       ├── run_001/             # Logs for run 1
-│       └── run_002/             # Logs for run 2
-├── .worktrees/                  # Isolated run environments (gitignored)
-│   ├── run_001/                 # Worktree for run 1
-│   └── run_002/                 # Worktree for run 2
-├── .env                         # API keys (GOOGLE_API_KEY, LLM_MODEL)
-├── pyproject.toml
-└── README.md
+├── src/pharma_agents/
+│   ├── main.py                  # Entry point, iteration loop, worktree management
+│   ├── crew.py                  # CrewAI agent & crew definitions
+│   ├── review_panel.py          # AutoGen expert review panel (GroupChat)
+│   ├── memory.py                # Persistent cross-run learning
+│   ├── report.py                # HTML report generation (Plotly charts)
+│   ├── tool_config.py           # YAML config loader for tool safety settings
+│   ├── tool_defaults.yaml       # Allowed packages + dangerous patterns
+│   ├── ingest_kb.py             # CLI: rebuild knowledge base index
+│   ├── agents.yaml              # Agent roles, goals, backstories
+│   ├── tasks.yaml               # Task prompts & workflows
+│   ├── review_agents.yaml       # Review panel agent definitions
+│   └── tools/
+│       ├── training.py          # Read/Write/Run train.py, CodeCheck, InstallPackage
+│       ├── knowledge_base.py    # Hybrid RAG (BM25 + dense + RRF)
+│       ├── literature.py        # Literature storage + semantic query
+│       ├── arxiv.py             # Arxiv search + paper fetching via alphaxiv
+│       ├── skills.py            # Scientific skill discovery + loading
+│       └── tooluniverse.py      # PubMed, PubChem, ToolUniverse catalog
+├── experiments/
+│   └── <experiment>/            # bbbp, solubility, clintox
+│       ├── baseline.json        # Metric, score, direction config
+│       ├── baseline_train.py    # Immutable reference (never modified)
+│       ├── train.py             # Working copy (agents modify this)
+│       ├── memory.json          # Cross-run agent memory
+│       ├── knowledge_base/      # Internal docs for RAG
+│       │   ├── internal_reports/    # Benchmarks, guidelines
+│       │   ├── assay_data/          # CSV experimental data
+│       │   ├── safety_docs/         # Risk assessments
+│       │   └── sops/               # Standard operating procedures
+│       ├── literature/          # Arxiv papers + embeddings
+│       └── tool_config.yaml     # Per-experiment package overrides
+├── mock_server/                 # Zero-cost testing (intercepts LLM calls)
+├── docs/
+│   ├── ARCHITECTURE.md          # Full system architecture
+│   ├── RAG.md                   # Knowledge base RAG technical reference
+│   ├── TOOLS.md                 # Tool reference with constraints
+│   └── decisions.md             # Architecture decision records
+└── tests/
 ```
 
-This separation allows swapping experiments (different models, metrics, datasets) by replacing the `experiments/` folder contents.
+## Safety & Guardrails
 
-## Agent Memory
+7-layer defense-in-depth for autonomous code-modifying agents:
 
-Agents learn across runs via persistent memory (`experiments/memory.json`).
+| Layer | What | How |
+|-------|------|-----|
+| **Code safety** | Block dangerous patterns | `os.system()`, `eval()`, `exec()` rejected on write |
+| **File isolation** | Only train.py modifiable | Path traversal guard, baseline immutable |
+| **Dependency control** | Package whitelist (YAML) | Per-experiment overrides, max 3 installs/run |
+| **Execution limits** | Timeouts + iteration caps | 180s training, 5-40 iter/agent, rate limiting |
+| **Adversarial review** | 5-expert panel gates implementation | Statistician, Chemist, Devil's Advocate, Memory, Ethics |
+| **Git isolation** | Worktrees + auto-revert | Main untouched, failures reverted, improvements committed |
+| **Adaptive memory** | Stagnation detection | 3 failures → stuck, 5 no-gain → exploration mode |
 
-```json
-{
-  "runs": {
-    "1": {
-      "run_id": 1,
-      "start_time": "2026-03-13T11:52:00",
-      "experiments": [
-        {
-          "iteration": 1,
-          "hypothesis": "Combine HistGradientBoosting with physicochemical descriptors",
-          "reasoning": "Building on successful approaches from memory",
-          "result": "success",
-          "rmse_before": 1.3175,
-          "rmse_after": 0.7061,
-          "improvement_pct": 46.4,
-          "insight": "Memory-informed decisions outperform blind exploration"
-        }
-      ],
-      "best_rmse": 0.6532,
-      "consecutive_failures": 0,
-      "conclusion": "LOCAL_OPTIMUM",
-      "conclusion_detail": "HistGradientBoosting + descriptors maximized. Try different architectures."
-    }
-  },
-  "global_best_rmse": 0.6532,
-  "key_learnings": [
-    "Combine fingerprints (local) with descriptors (global)",
-    "HistGradientBoosting outperforms RandomForest with good features"
-  ]
-}
-```
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full guardrails documentation.
 
-**What gets remembered:**
-- **What worked** - with reasoning and improvement percentage
-- **What failed** - with reasoning and WHY it failed
-- **Key learnings** - actionable insights for future runs
+## Hallucination-Proof Evaluation
 
-The Hypothesis Agent sees this context and can:
-- Build on successful approaches
-- Avoid repeating failures
-- Combine winning strategies
-
-### Run Conclusions & Notes for Future Researchers
-
-Each run ends with a conclusion that guides future agents:
-
-| Conclusion | Meaning | Guidance |
-|------------|---------|----------|
-| `LOCAL_OPTIMUM` | Reached diminishing returns | Try different architectures, GNN features, ensembles |
-| `PROGRESS_CONTINUING` | Still improving when stopped | Continue same direction, more iterations |
-| `STUCK` | Multiple consecutive failures | Exploration mode required |
-
-Future runs see **"Notes from Previous Researchers"**:
-```
-### Notes from Previous Researchers
-- **Run 0** [PROGRESS_CONTINUING]: 18.4% improvement with descriptors. More iterations could help.
-- **Run 1** [LOCAL_OPTIMUM]: 50.4% improvement. HistGradientBoosting + descriptors maximized.
-  Future runs should try: different model architectures, GNN-based features, or ensembles.
-```
-
-### Stuck Detection & Exploration Mode
-
-The system detects when agents are stuck and triggers exploration mode:
-
-**Two-level detection:**
-1. **Per-run stuck**: 3+ consecutive failures in the current run
-2. **Global stagnation**: No improvement in the last 5 experiments across all runs
-
-**When stuck, agents see:**
-```
-### EXPLORATION MODE REQUIRED
-**GLOBAL STAGNATION: No improvement in recent experiments.
-Current approaches have been exhausted.**
-
-You MUST propose something RADICALLY DIFFERENT from what's been tried.
-Look at 'What Failed' and 'What Worked' - then think outside that box.
-Consider: different model families, different feature representations,
-simplification instead of complexity, or entirely new scientific angles.
-```
-
-This prevents agents from getting trapped in local optima and encourages creative exploration of the solution space.
-
-## Hallucinations vs Truth
-
-LLMs can hallucinate numbers in their reports. We handle this:
+LLMs can hallucinate numbers. We separate truth from text:
 
 | Component | Can Hallucinate? | Source of Truth |
 |-----------|------------------|-----------------|
 | Agent proposals | Yes (harmless) | Just text suggestions |
-| Agent RMSE reports | Yes (dangerous) | **Python evaluation** |
+| Agent metric reports | Yes (dangerous) | **Python evaluation** |
 | Improvement decisions | No | `run_training()` in Python |
-| Memory records | No | Actual measured RMSE values |
+| Memory records | No | Actual measured values |
 
-**The memory is the pudding** - agents may claim "WORSE" when it's actually better, but:
-1. Python runs the actual training
-2. Python compares actual RMSE values
-3. Python decides commit vs revert
-4. Memory records what actually happened
+Python runs training, compares metrics, decides commit vs revert. Agent text is for observability, not decisions.
 
-Agent text output is for observability, not decisions.
-
-## Safety Features
-
-- **Baseline preservation**: `baseline_train.py` is never modified
-- **Branch isolation**: Each run on its own branch
-- **Fixed evaluation**: Python evaluation harness (no LLM involvement)
-- **Code validation**: ML Engineer runs ruff+pyright before finishing
-- **Experiment logging**: Every run logged with timestamps
-- **Timeout**: Training must complete in 180 seconds
-- **Revert on failure**: Bad changes don't persist
-- **Git audit trail**: Every improvement is a commit
-- **Memory persistence**: Learnings survive across runs
-
-## Example Results
-
-**Run 001** (5 iterations with memory):
-- Baseline RMSE: 1.3175
-- Final RMSE: 0.6532
-- Improvement: **50.4%**
-
-**Iteration progression:**
-1. Combined HistGradientBoosting + physicochemical descriptors → 46% improvement
-2. Fine-tuned learning rate → +0.2%
-3. Added aromatic proportion feature → +1.5%
-4. Tried regularization (failed, reverted)
-5. Optimized feature combination → +5.9%
-
-**Key insight:** The agent learned from memory that MolLogP and MolWt are critical (from seeded experiments), then strategically combined HistGradientBoosting with all successful descriptors. Memory-informed decisions outperformed blind exploration.
-
-### Auto-Generated Reports
+## Auto-Generated Reports
 
 Each run generates an interactive HTML report with Plotly charts:
 
 ![Report Summary](docs/screenshot1.png)
 ![Report Charts](docs/screenshot2.png)
 
-**Charts include:**
-- **Score Over Iterations** - Baseline (gray) → improvements (green) / failures (red)
-- **Before vs After** - Clear comparison of starting vs final metric
-- **Success Rate** - Pie chart showing experiment success/failure ratio
-- **Improvement by Iteration** - Bar chart of incremental gains
-
-**Generate reports:**
 ```bash
-# Auto-generated after each run in experiments/<exp>/run_XXX/report.html
-
-# Regenerate from memory.json
-uv run python -m pharma_agents.report -e solubility --open
+uv run python -m pharma_agents.report -e bbbp --open
 ```
-
-## Why This Architecture
-
-**The molecule is a prop. The agentic capability is the show.**
-
-This demonstrates:
-- Multi-agent orchestration (CrewAI)
-- Autonomous iteration on ML code
-- Clear metrics and feedback loops
-- Production patterns (logging, git, reproducibility)
-- Pharma domain awareness (ADMET, solubility, Delaney paper)
-
-The same architecture scales to larger ADMET tasks with GPU.
 
 ## Framework Choice
 
-**Why CrewAI over LangGraph?**
+**Why CrewAI + AutoGen?**
 
-> LangGraph is powerful but adds complexity I didn't need for this pattern. My use case is a sequential crew with clear roles: Researcher proposes, Engineer implements, QA evaluates. CrewAI's role-based model mapped directly to that design. I optimized for clarity and iteration speed over flexibility I wouldn't use.
+| Framework | Used For | Why |
+|-----------|----------|-----|
+| **CrewAI** | Sequential ML pipeline | Role-based agents with clear hand-offs (propose → implement → evaluate) |
+| **AutoGen** | Adversarial review panel | GroupChat enables multi-turn debate — agents build on each other's arguments |
+
+Each framework is used for its strength. See [decisions.md](docs/decisions.md) for the full ADR.
 
 ## License
 
