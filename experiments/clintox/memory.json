@@ -68,9 +68,32 @@
       "consecutive_failures": 0,
       "conclusion": "PROGRESS_CONTINUING",
       "conclusion_detail": "Still making progress (avg 11.4% per success). Reached ROC_AUC 0.8735. More iterations could yield improvements."
+    },
+    "5": {
+      "run_id": 5,
+      "start_time": "2026-03-18T15:06:56.889311",
+      "experiments": [
+        {
+          "iteration": 1,
+          "timestamp": "2026-03-18T15:06:56.891088",
+          "hypothesis": "No hypothesis captured",
+          "reasoning": "No reasoning captured",
+          "result": "success",
+          "score_before": 0.7037,
+          "score_after": 0.8815,
+          "improvement_pct": 25.266448770783,
+          "insight": "Achieved 25.3% improvement",
+          "review_verdict": "approved",
+          "review_feedback": "From a safety and regulatory standpoint, SMOTE is an accepted technique for handling class imbalance in toxicity prediction per our internal SOP-ML-VAL-003. The SOP requires stratified 5-fold CV minimum and external validation with ROC-AUC >= 0.85. The proposal aligns with these requirements. One note: per the clinical toxicity risk framework (SAF-2024-TOX-0055), ML toxicity predictions should be used as screening filters, not definitive diagnostics. The model should report risk tiers (Low/Mediu"
+        }
+      ],
+      "best_score": 0.8815,
+      "consecutive_failures": 0,
+      "conclusion": "PROGRESS_CONTINUING",
+      "conclusion_detail": "Still making progress (avg 25.3% per success). Reached ROC_AUC 0.8815. More iterations could yield improvements."
     }
   },
   "global_best_score": 0.9477,
   "key_learnings": [],
-  "last_updated": "2026-03-15T23:25:18.382189"
+  "last_updated": "2026-03-18T15:06:58.363430"
 }
